@@ -46,7 +46,7 @@ func (t T) open(name string) *Conn {
 func (t T) close(c io.Closer) {
 	if c != nil {
 		if db, _ := c.(*Conn); db != nil {
-			if path := db.DBFileName("main"); path != "" {
+			if path := db.FileName("main"); path != "" {
 				defer os.Remove(path)
 			}
 		}
@@ -59,28 +59,19 @@ func (t T) close(c io.Closer) {
 	}
 }
 
-func (t T) prepare(c *Conn, sql string) *Stmt {
-	s, _, err := c.Prepare(sql)
-	if s == nil || err != nil {
-		t.Fatalf(cl("c.Prepare(%q) unexpected error: %v"), sql, err)
-	}
-	return s
-}
-
-func (t T) query(c *Conn, args ...interface{}) (s *Stmt) {
+func (t T) prepare(c *Conn, args ...interface{}) (s *Stmt) {
 	var sql string
 	var err error
 	sql = args[0].(string)
-	s, err = c.Query(sql, args[1:]...)
+	s, err = c.Prepare(sql, args[1:]...)
 	if s == nil || err != nil {
-		t.Fatalf(cl("(%T).Query(%q) unexpected error: %v"), c, sql, err)
+		t.Fatalf(cl("(%T).Prepare(%q) unexpected error: %v"), c, sql, err)
 	}
 	return
 }
 
 func (t T) bind(s *Stmt, args ...interface{}) {
-	var err error
-	err = s.Bind(args...)
+	err := s.Bind(args...)
 	if s == nil || err != nil {
 		t.Fatalf(cl("(%T).Bind(%q) unexpected error: %v"), s, args, err)
 	}
@@ -187,8 +178,8 @@ func TestCreate(T *testing.T) {
 	defer t.skipRestIfFailed()
 
 	checkPath := func(c *Conn, name, want string) {
-		if have := c.DBFileName(name); have != want {
-			t.Fatalf(cl("c.DBFileName() expected %q; got %q"), want, have)
+		if have := c.FileName(name); have != want {
+			t.Fatalf(cl("c.FileName() expected %q; got %q"), want, have)
 		}
 	}
 	sql := "CREATE TABLE x(a); INSERT INTO x VALUES(1);"
@@ -230,7 +221,7 @@ func TestCreate(T *testing.T) {
 	t.exec(c, sql)
 }
 
-func TestQuery(T *testing.T) {
+func TestPrepare(T *testing.T) {
 	t := begin(T)
 	defer t.skipRestIfFailed()
 
@@ -252,7 +243,7 @@ func TestQuery(T *testing.T) {
 	defer t.close(c)
 	t.exec(c, sql)
 
-	s := t.query(c, "SELECT * FROM x")
+	s := t.prepare(c, "SELECT * FROM x")
 	defer t.close(s)
 	t.step(s, true)
 	t.scan(s, &have.a, &have.b, &have.c, &have.d, &have.e)
@@ -285,7 +276,7 @@ func TestScan(T *testing.T) {
 	scan := func(s *Stmt, dst ...interface{}) {
 		// Re-query to avoid interference from type conversion
 		t.reset(s)
-		t.bind(s, nil)
+		s.ClearBindings()
 		t.step(s, true)
 
 		t.scan(s, dst...)
@@ -325,7 +316,7 @@ func TestScan(T *testing.T) {
 		CREATE TABLE x(a, b, c, d, e, f, g, h, i);
 		INSERT INTO x VALUES(NULL, '', x'', 0, 0.0, 4.2, 42, '42', x'3432');
 	`)
-	s := t.query(c, "SELECT * FROM x")
+	s := t.prepare(c, "SELECT * FROM x")
 	defer t.close(s)
 
 	t.step(s, true)
@@ -427,7 +418,7 @@ func TestScanDynamic(T *testing.T) {
 			t.Errorf("%s %s\n", reflect.TypeOf(want.d), reflect.TypeOf(have.d))
 			t.Fatalf(cl("scanNext() expected\n%#v; got\n%#v"), want, have)
 		}
-		if haveRow, err := s.Step(); haveRow == false {
+		if haveRow, err := s.Step(); !haveRow {
 			t.reset(s)
 			t.step(s, true)
 		} else if err != nil {
@@ -450,7 +441,7 @@ func TestScanDynamic(T *testing.T) {
 		INSERT INTO x VALUES('42', '42', '42', '42');
 		INSERT INTO x VALUES(x'3432', x'3432', x'3432', x'3432');
 	`)
-	s := t.query(c, "SELECT * FROM x ORDER BY rowid")
+	s := t.prepare(c, "SELECT * FROM x ORDER BY rowid")
 	defer t.close(s)
 	t.step(s, true)
 
@@ -499,13 +490,16 @@ func TestTail(T *testing.T) {
 	defer t.close(c)
 
 	check := func(sql, tail string) {
-		s, gotTail, _ := c.Prepare(sql)
+		s, _ := c.Prepare(sql)
 		if s != nil {
 			defer t.close(s)
 		}
+		if s == nil {
+			return
+		}
 
-		if gotTail != tail {
-			t.Errorf(cl("tail expected %q; got %q"), tail, gotTail)
+		if s.Tail != tail {
+			t.Errorf(cl("tail expected %q; got %q"), tail, s.Tail)
 		}
 	}
 	head := "CREATE TABLE x(a);"
@@ -539,7 +533,7 @@ func TestParams(T *testing.T) {
 		return NULL
 	}
 	verify := func(_a, _b, _c, _d interface{}) {
-		s := t.query(c, "SELECT * FROM x ORDER BY rowid LIMIT 1")
+		s := t.prepare(c, "SELECT * FROM x ORDER BY rowid LIMIT 1")
 		defer t.close(s)
 
 		t.step(s, true)
@@ -611,8 +605,8 @@ func TestParams(T *testing.T) {
 	t.exec(s, NamedArgs{"@B": RawString("hello"), "$d": RawBytes("world")})
 	verify(nil, "hello", nil, []byte("world"))
 
-	// Conn.Query
-	s, err := c.Query(sql, 1, 2, 3, 4)
+	// Conn.Prepare
+	s, err := c.Prepare(sql, 1, 2, 3, 4)
 	if err != nil {
 		t.Fatal("failed to insert 1,2,3,4")
 	}
@@ -661,7 +655,7 @@ func TestTx(T *testing.T) {
 	}
 
 	// Verify
-	s := t.query(c, "SELECT * FROM x ORDER BY rowid")
+	s := t.prepare(c, "SELECT * FROM x ORDER BY rowid")
 	defer t.close(s)
 	t.step(s, true)
 
@@ -746,7 +740,7 @@ func TestIO(T *testing.T) {
 	}
 
 	// Verify
-	s := t.query(c, "SELECT * FROM x ORDER BY rowid")
+	s := t.prepare(c, "SELECT * FROM x ORDER BY rowid")
 	defer t.close(s)
 	var have string
 	t.step(s, true)
@@ -798,7 +792,7 @@ func TestBackup(T *testing.T) {
 	}
 
 	// Verify
-	s := t.query(c2, "SELECT * FROM x ORDER BY rowid")
+	s := t.prepare(c2, "SELECT * FROM x ORDER BY rowid")
 	defer t.close(s)
 	t.step(s, true)
 
@@ -837,7 +831,7 @@ func TestSchema(T *testing.T) {
 			t.Fatalf(cl("s.DeclTypes() expected %v; got %v"), want, have)
 		}
 	}
-	s := t.query(c, "SELECT * FROM x ORDER BY rowid")
+	s := t.prepare(c, "SELECT * FROM x ORDER BY rowid")
 	defer t.close(s)
 
 	t.step(s, true)

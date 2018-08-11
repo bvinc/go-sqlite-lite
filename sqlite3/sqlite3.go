@@ -148,38 +148,55 @@ func (c *Conn) Close() error {
 			}
 			return err
 		}
-		*c = Conn{} // Clear callback handlers only if db was closed
 	}
 	return nil
 }
 
 // Prepare compiles the first statement in sql. Any remaining text after the
-// first statement is saved in tail.  This function may return a nil stmt and a
-// nil error, if the sql string is empty.
+// first statement is saved in s.Tail.  This function may return a nil stmt and
+// a nil error, if the sql string contains nothing to do.  For convenience,
+// this function can also bind arguments to the returned statement.  If an
+// error occurs during binding, the statement is closed/finalized and the error
+// is returned.
 // [https://www.sqlite.org/c3ref/prepare.html]
-func (c *Conn) Prepare(sql string) (s *Stmt, tail string, err error) {
+func (c *Conn) Prepare(sql string, args ...interface{}) (s *Stmt, err error) {
 	zSQL := sql + "\x00"
 
 	var stmt *C.sqlite3_stmt
 	var cTail *C.char
 	rc := C.sqlite3_prepare_v2(c.db, cStr(zSQL), -1, &stmt, &cTail)
 	if rc != OK {
-		return nil, "", errStr(rc)
+		return nil, errStr(rc)
 	}
 
 	if stmt == nil {
-		return nil, "", nil
+		return nil, nil
 	}
 
-	s = &Stmt{stmt: stmt}
+	var tail string
 	if cTail != nil {
-		if n := cStrOffset(zSQL, cTail); n < len(sql) {
+		n := cStrOffset(zSQL, cTail)
+		if n >= 0 && n < len(sql) {
 			tail = sql[n:]
 		}
 	}
-	return s, tail, nil
+
+	s = &Stmt{stmt: stmt, Tail: tail}
+
+	if len(args) > 0 {
+		if err = s.Bind(args...); err != nil {
+			s.Close()
+			return nil, err
+		}
+	}
+
+	return s, nil
 }
 
+// Exec is a convenience function that will call sqlite3_exec if no argument
+// are given.  If arguments are given, it's simply a convenient way to
+// Prepare a statement, Bind arguments, Step the statement to completion,
+// and Close/finalize the statement.
 // [https://www.sqlite.org/c3ref/exec.html]
 func (c *Conn) Exec(sql string, args ...interface{}) error {
 	// Fast path via sqlite3_exec, which doesn't support parameter binding
@@ -188,7 +205,7 @@ func (c *Conn) Exec(sql string, args ...interface{}) error {
 		return c.exec(cStr(sql))
 	}
 
-	s, _, err := c.Prepare(sql)
+	s, err := c.Prepare(sql)
 	if err != nil {
 		return err
 	}
@@ -197,7 +214,7 @@ func (c *Conn) Exec(sql string, args ...interface{}) error {
 	}
 	defer s.Close()
 
-	if err = s.bind(args); err != nil {
+	if err = s.Bind(args...); err != nil {
 		return err
 	}
 
@@ -206,25 +223,6 @@ func (c *Conn) Exec(sql string, args ...interface{}) error {
 	}
 
 	return nil
-}
-
-// Query is a convenience method for executing the first query in sql. It
-// returns a prepared statement ready for stepping.
-func (c *Conn) Query(sql string, args ...interface{}) (*Stmt, error) {
-	s, _, err := c.Prepare(sql)
-	if err != nil {
-		return nil, err
-	}
-	if s == nil {
-		return nil, nil
-	}
-
-	if err = s.Bind(args...); err != nil {
-		s.Close()
-		return nil, err
-	}
-
-	return s, nil
 }
 
 // Begin starts a new deferred transaction. This is equivalent to
@@ -340,10 +338,10 @@ func (c *Conn) BusyTimeout(d time.Duration) {
 	C.sqlite3_busy_timeout(c.db, C.int(d/time.Millisecond))
 }
 
-// Path returns the full file path of an attached database. An empty string is
-// returned for temporary databases.
+// FileName returns the full file path of an attached database. An empty string
+// is returned for temporary databases.
 // [https://www.sqlite.org/c3ref/db_filename.html]
-func (c *Conn) DBFileName(db string) string {
+func (c *Conn) FileName(db string) string {
 	db += "\x00"
 	if path := C.sqlite3_db_filename(c.db, cStr(db)); path != nil {
 		return C.GoString(path)
@@ -382,17 +380,10 @@ func (c *Conn) exec(sql *C.char) error {
 }
 
 // Stmt is a prepared statement handle.
-//
-// SQLite automatically recompiles prepared statements when the database schema
-// changes. A query like "SELECT * FROM x" may return a different number of
-// columns from one execution to the next if the table is altered. The
-// recompilation, if required, only happens at the start of execution (during a
-// call to Exec or Query). Statements that are already running (Busy() == true)
-// are not recompiled. Thus, the safest way of obtaining column information is
-// to call Exec or Query first, followed by NumColumns, Columns, DeclTypes, etc.
 // [https://www.sqlite.org/c3ref/stmt.html]
 type Stmt struct {
 	stmt *C.sqlite3_stmt
+	Tail string
 }
 
 // Close releases all resources associated with the prepared statement. This
@@ -408,8 +399,7 @@ func (s *Stmt) Close() error {
 }
 
 // Busy returns true if the prepared statement is in the middle of execution
-// with a row available for scanning. It is not necessary to reset a busy
-// statement before making another call to Exec or Query.
+// with a row available for scanning.
 func (s *Stmt) Busy() bool {
 	return C.sqlite3_stmt_busy(s.stmt) != 0
 }
@@ -421,9 +411,8 @@ func (s *Stmt) ReadOnly() bool {
 	return C.sqlite3_stmt_readonly(s.stmt) != 0
 }
 
-// BindParameterCount returns the number of bound parameters in the prepared
-// statement. This is also the number of arguments required for calling Exec or
-// Query without a NamedArgs map.
+// BindParameterCount returns the number of SQL parameters in the prepared
+// statement.
 // [https://www.sqlite.org/c3ref/bind_parameter_count.html]
 func (s *Stmt) BindParameterCount() int {
 	return int(C.sqlite3_bind_parameter_count(s.stmt))
@@ -506,7 +495,7 @@ func (s *Stmt) DeclTypes() []string {
 // then steps the statement to completion and resets the prepared statement. No
 // rows are returned.  Note that bindings are not cleared.
 func (s *Stmt) Exec(args ...interface{}) error {
-	err := s.bind(args)
+	err := s.Bind(args...)
 	if err != nil {
 		s.Reset()
 		return err
@@ -527,7 +516,49 @@ func (s *Stmt) Exec(args ...interface{}) error {
 // Bind binds either the named arguments or unnamed arguments depending on the
 // type of arguments passed
 func (s *Stmt) Bind(args ...interface{}) error {
-	return s.bind(args)
+	for i, v := range args {
+		var rc C.int
+		if v == nil {
+			rc = C.sqlite3_bind_null(s.stmt, C.int(i+1))
+			if rc != OK {
+				return errStr(rc)
+			}
+			continue
+		}
+		switch v := v.(type) {
+		case int:
+			rc = C.sqlite3_bind_int64(s.stmt, C.int(i+1), C.sqlite3_int64(v))
+		case int64:
+			rc = C.sqlite3_bind_int64(s.stmt, C.int(i+1), C.sqlite3_int64(v))
+		case float64:
+			rc = C.sqlite3_bind_double(s.stmt, C.int(i+1), C.double(v))
+		case bool:
+			rc = C.sqlite3_bind_int64(s.stmt, C.int(i+1), C.sqlite3_int64(cBool(v)))
+		case string:
+			rc = C.bind_text(s.stmt, C.int(i+1), cStr(v), C.int(len(v)), 1)
+		case []byte:
+			rc = C.bind_blob(s.stmt, C.int(i+1), cBytes(v), C.int(len(v)), 1)
+		case time.Time:
+			rc = C.sqlite3_bind_int64(s.stmt, C.int(i+1), C.sqlite3_int64(v.Unix()))
+		case RawString:
+			rc = C.bind_text(s.stmt, C.int(i+1), cStr(string(v)), C.int(len(v)), 0)
+		case RawBytes:
+			rc = C.bind_blob(s.stmt, C.int(i+1), cBytes(v), C.int(len(v)), 0)
+		case ZeroBlob:
+			rc = C.sqlite3_bind_zeroblob(s.stmt, C.int(i+1), C.int(v))
+		case NamedArgs:
+			if i != 0 || len(args) != 1 {
+				return pkgErr(MISUSE, "RowArgs must be used as the only argument to Bind()")
+			}
+			return s.bindNamed(NamedArgs(v))
+		default:
+			return pkgErr(MISUSE, "unsupported type at index %d (%T)", int(i), v)
+		}
+		if rc != OK {
+			return errStr(rc)
+		}
+	}
+	return nil
 }
 
 // Scan retrieves data from the current row, storing successive column values
@@ -594,6 +625,9 @@ func (s *Stmt) bindNamed(args NamedArgs) error {
 		var rc C.int
 		if v == nil {
 			rc = C.sqlite3_bind_null(s.stmt, C.int(i))
+			if rc != OK {
+				return errStr(rc)
+			}
 			continue
 		}
 		switch v := v.(type) {
@@ -619,51 +653,6 @@ func (s *Stmt) bindNamed(args NamedArgs) error {
 			rc = C.sqlite3_bind_zeroblob(s.stmt, C.int(i), C.int(v))
 		default:
 			return pkgErr(MISUSE, "unsupported type for %s (%T)", name, v)
-		}
-		if rc != OK {
-			return errStr(rc)
-		}
-	}
-	return nil
-}
-
-// bind binds statement parameter i (starting at 1) to the value v. The
-// parameter name is only used for error reporting.
-func (s *Stmt) bind(args []interface{}) error {
-	for i, v := range args {
-		var rc C.int
-		if v == nil {
-			rc = C.sqlite3_bind_null(s.stmt, C.int(i+1))
-			continue
-		}
-		switch v := v.(type) {
-		case int:
-			rc = C.sqlite3_bind_int64(s.stmt, C.int(i+1), C.sqlite3_int64(v))
-		case int64:
-			rc = C.sqlite3_bind_int64(s.stmt, C.int(i+1), C.sqlite3_int64(v))
-		case float64:
-			rc = C.sqlite3_bind_double(s.stmt, C.int(i+1), C.double(v))
-		case bool:
-			rc = C.sqlite3_bind_int64(s.stmt, C.int(i+1), C.sqlite3_int64(cBool(v)))
-		case string:
-			rc = C.bind_text(s.stmt, C.int(i+1), cStr(v), C.int(len(v)), 1)
-		case []byte:
-			rc = C.bind_blob(s.stmt, C.int(i+1), cBytes(v), C.int(len(v)), 1)
-		case time.Time:
-			rc = C.sqlite3_bind_int64(s.stmt, C.int(i+1), C.sqlite3_int64(v.Unix()))
-		case RawString:
-			rc = C.bind_text(s.stmt, C.int(i+1), cStr(string(v)), C.int(len(v)), 0)
-		case RawBytes:
-			rc = C.bind_blob(s.stmt, C.int(i+1), cBytes(v), C.int(len(v)), 0)
-		case ZeroBlob:
-			rc = C.sqlite3_bind_zeroblob(s.stmt, C.int(i+1), C.int(v))
-		case NamedArgs:
-			if i != 0 || len(args) != 1 {
-				return pkgErr(MISUSE, "RowArgs must be used as the only argument to Bind()")
-			}
-			return s.bindNamed(NamedArgs(v))
-		default:
-			return pkgErr(MISUSE, "unsupported type at index %d (%T)", int(i), v)
 		}
 		if rc != OK {
 			return errStr(rc)
