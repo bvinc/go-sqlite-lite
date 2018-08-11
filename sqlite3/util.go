@@ -10,7 +10,6 @@ package sqlite3
 import "C"
 
 import (
-	"bytes"
 	"fmt"
 	"reflect"
 	"unsafe"
@@ -26,13 +25,6 @@ import (
 // statement.
 // [http://www.sqlite.org/lang_expr.html#varparam]
 type NamedArgs map[string]interface{}
-
-// RowMap may be passed as the last (or only) argument to Stmt.Scan to create a
-// map of all remaining column/value pairs in the current row. The map is not
-// cleared before being populated with new column values. Assignment is
-// performed in left-to-right column order, and values may be overwritten if the
-// query returns two or more columns with identical names.
-type RowMap map[string]interface{}
 
 // RawString and RawBytes are special string and []byte types that may be used
 // for database input and output without the cost of an extra copy operation.
@@ -96,6 +88,9 @@ func errStr(rc C.int) error {
 }
 
 func errMsg(rc C.int, db *C.sqlite3) error {
+	if db == nil {
+		return errStr(rc)
+	}
 	return &Error{int(rc), C.GoString(C.sqlite3_errmsg(db))}
 }
 
@@ -120,7 +115,6 @@ func (err *Error) Error() string {
 // Errors returned for access attempts to closed or invalid objects.
 var (
 	ErrBadConn   = &Error{MISUSE, "closed or invalid connection"}
-	ErrBadStmt   = &Error{MISUSE, "closed or invalid statement"}
 	ErrBadIO     = &Error{MISUSE, "closed or invalid incremental I/O operation"}
 	ErrBadBackup = &Error{MISUSE, "closed or invalid backup operation"}
 )
@@ -148,19 +142,6 @@ func ReleaseMemory(n int) int {
 		return 0
 	}
 	return int(C.sqlite3_release_memory(C.int(n)))
-}
-
-// SingleThread returns true if the SQLite library was compiled with
-// -DSQLITE_THREADSAFE=0. In this threading mode all mutex code is omitted and
-// the package becomes unsafe for concurrent access, even to separate database
-// connections.
-//
-// The SQLite source that's part of this package is compiled with
-// -DSQLITE_THREADSAFE=2, so this function should always return false. It is
-// kept for backward compatibility when dynamic linking was supported in Go 1.0.
-// [http://www.sqlite.org/threadsafe.html]
-func SingleThread() bool {
-	return initErr == nil && C.sqlite3_threadsafe() == 0
 }
 
 // SoftHeapLimit sets and/or queries the soft limit on the amount of heap memory
@@ -218,46 +199,6 @@ func VersionNum() int {
 		return 0
 	}
 	return int(C.sqlite3_libversion_number())
-}
-
-// Print prints out all rows returned by a query. This function is intended as a
-// debugging aid and may be removed or altered in the future. Do not use it in
-// production applications.
-func Print(s *Stmt) error {
-	if s == nil || s.ColumnCount() == 0 {
-		return nil
-	}
-	var err error
-	if !s.Busy() {
-		if err = s.Query(); err != nil {
-			return err
-		}
-	}
-	cols := s.ColumnNames()
-	buf := bytes.NewBuffer(make([]byte, 0, len(cols)*10))
-	row := make(RowMap, len(cols))
-
-	buf.WriteByte('~')
-	for _, col := range cols {
-		fmt.Fprintf(buf, " %s ~", col)
-	}
-	fmt.Println(buf)
-	for {
-		hasRow, err := s.Step()
-		if err != nil || !hasRow {
-			break
-		}
-		if err = s.Scan(row); err != nil {
-			return err
-		}
-		buf.Reset()
-		buf.WriteByte('|')
-		for _, col := range cols {
-			fmt.Fprintf(buf, " %*v |", len(col), row[col])
-		}
-		fmt.Println(buf)
-	}
-	return err
 }
 
 // raw casts s to a RawString.

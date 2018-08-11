@@ -11,7 +11,6 @@ import "C"
 
 import (
 	"io"
-	"runtime"
 )
 
 // Backup is a handle to an online backup operation between two databases.
@@ -34,7 +33,6 @@ func newBackup(src *Conn, srcName string, dst *Conn, dstName string) (*Backup, e
 	}
 
 	b := &Backup{src, dst, bkup}
-	runtime.SetFinalizer(b, (*Backup).Close)
 	return b, nil
 }
 
@@ -44,7 +42,6 @@ func newBackup(src *Conn, srcName string, dst *Conn, dstName string) (*Backup, e
 func (b *Backup) Close() error {
 	if bkup := b.bkup; bkup != nil {
 		b.bkup = nil
-		runtime.SetFinalizer(b, nil)
 		if rc := C.sqlite3_backup_finish(bkup); rc != OK {
 			return errMsg(rc, b.dst.db)
 		}
