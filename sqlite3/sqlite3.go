@@ -106,10 +106,10 @@ type Conn struct {
 
 // Open creates a new connection to a SQLite database. The name can be 1) a path
 // to a file, which is created if it does not exist, 2) a URI using the syntax
-// described at https://www.sqlite.org/uri.html, 3) the string ":memory:", which
-// creates a temporary in-memory database, or 4) an empty string, which creates
-// a temporary on-disk database (deleted when closed) in the directory returned
-// by os.TempDir().
+// described at https://www.sqlite.org/uri.html, 3) the string ":memory:",
+// which creates a temporary in-memory database, or 4) an empty string, which
+// creates a temporary on-disk database (deleted when closed) in the directory
+// returned by os.TempDir().
 // [https://www.sqlite.org/c3ref/open.html]
 func Open(name string) (*Conn, error) {
 	if initErr != nil {
