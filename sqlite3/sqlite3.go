@@ -109,17 +109,24 @@ type Conn struct {
 // described at https://www.sqlite.org/uri.html, 3) the string ":memory:",
 // which creates a temporary in-memory database, or 4) an empty string, which
 // creates a temporary on-disk database (deleted when closed) in the directory
-// returned by os.TempDir().
+// returned by os.TempDir(). Flags to Open can optionally be provided.
 // [https://www.sqlite.org/c3ref/open.html]
-func Open(name string) (*Conn, error) {
+func Open(name string, flagArgs ...int) (*Conn, error) {
+	if len(flagArgs) > 1 {
+		pkgErr(MISUSE, "too many arguments provided to Open")
+	}
+
 	if initErr != nil {
 		return nil, initErr
 	}
 	name += "\x00"
 
 	var db *C.sqlite3
-	rc := C.sqlite3_open_v2(cStr(name), &db,
-		C.SQLITE_OPEN_READWRITE|C.SQLITE_OPEN_CREATE, nil)
+	flags := C.SQLITE_OPEN_READWRITE | C.SQLITE_OPEN_CREATE
+	if len(flagArgs) == 1 {
+		flags = flagArgs[0]
+	}
+	rc := C.sqlite3_open_v2(cStr(name), &db, C.int(flags), nil)
 	if rc != OK {
 		err := errMsg(rc, db)
 		C.sqlite3_close(db)

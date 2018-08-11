@@ -19,6 +19,31 @@ const (
 	NULL    = C.SQLITE_NULL    // 5
 )
 
+// Flags that can be provided to Open
+// [https://www.sqlite.org/c3ref/open.html]
+const (
+	OPEN_READONLY       = C.SQLITE_OPEN_READONLY       // Ok for sqlite3_open_v2()
+	OPEN_READWRITE      = C.SQLITE_OPEN_READWRITE      // Ok for sqlite3_open_v2()
+	OPEN_CREATE         = C.SQLITE_OPEN_CREATE         // Ok for sqlite3_open_v2()
+	OPEN_DELETEONCLOSE  = C.SQLITE_OPEN_DELETEONCLOSE  // VFS only
+	OPEN_EXCLUSIVE      = C.SQLITE_OPEN_EXCLUSIVE      // VFS only
+	OPEN_AUTOPROXY      = C.SQLITE_OPEN_AUTOPROXY      // VFS only
+	OPEN_URI            = C.SQLITE_OPEN_URI            // Ok for sqlite3_open_v2()
+	OPEN_MEMORY         = C.SQLITE_OPEN_MEMORY         // Ok for sqlite3_open_v2()
+	OPEN_MAIN_DB        = C.SQLITE_OPEN_MAIN_DB        // VFS only
+	OPEN_TEMP_DB        = C.SQLITE_OPEN_TEMP_DB        // VFS only
+	OPEN_TRANSIENT_DB   = C.SQLITE_OPEN_TRANSIENT_DB   // VFS only
+	OPEN_MAIN_JOURNAL   = C.SQLITE_OPEN_MAIN_JOURNAL   // VFS only
+	OPEN_TEMP_JOURNAL   = C.SQLITE_OPEN_TEMP_JOURNAL   // VFS only
+	OPEN_SUBJOURNAL     = C.SQLITE_OPEN_SUBJOURNAL     // VFS only
+	OPEN_MASTER_JOURNAL = C.SQLITE_OPEN_MASTER_JOURNAL // VFS only
+	OPEN_NOMUTEX        = C.SQLITE_OPEN_NOMUTEX        // Ok for sqlite3_open_v2()
+	OPEN_FULLMUTEX      = C.SQLITE_OPEN_FULLMUTEX      // Ok for sqlite3_open_v2()
+	OPEN_SHAREDCACHE    = C.SQLITE_OPEN_SHAREDCACHE    // Ok for sqlite3_open_v2()
+	OPEN_PRIVATECACHE   = C.SQLITE_OPEN_PRIVATECACHE   // Ok for sqlite3_open_v2()
+	OPEN_WAL            = C.SQLITE_OPEN_WAL            // VFS only
+)
+
 // General result codes returned by the SQLite API. When converted to an error,
 // OK and ROW become nil, and DONE becomes either nil or io.EOF, depending on
 // the context in which the statement is executed. All other codes are returned
