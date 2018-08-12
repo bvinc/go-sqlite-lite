@@ -105,6 +105,7 @@ for {
 	}
 	fmt.Println("name:", name, "age:", age)
 }
+// Remember to Reset the statement if you would like to Bind new arguments and reuse the prepared staement
 ```
 
 ## Advanced Features
@@ -125,6 +126,14 @@ If a `database/sql` interface is required, please use https://github.com/mattn/g
 * **What are the differences betwen this driver and the mxk/go-sqlite driver?**
 
 This driver was forked from `mxk/go-sqlite-driver`.  It hasn't been maintained in years and used an ancient version of SQLite.  A large number of features were removed, reworked, and renamed.  A lot of smartness and state was removed.  It is now much easier to upgrade to newer versions of SQLite since the `codec` feature was removed.  The behavior of methods now lines up closely with the behavior of SQLite's C API.
+
+* **Is it thread safe?**
+
+go-sqlite-lite is as thread safe as SQLite.  SQLite with this driver is compiled with `-DSQLITE_THREADSAFE=2` which is **Multi-thread** mode.  In this mode, SQLite can be safely used by multiple threads provided that no single database connection is used simultaneously in two or more threads.  Consult the SQLite documentation for more information.
+
+https://www.sqlite.org/threadsafe.html
+https://www.sqlite.org/sharedcache.html
+https://www.sqlite.org/wal.html
 
 ## License
 This project is licensed under the BSD license.
