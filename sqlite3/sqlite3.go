@@ -1,4 +1,4 @@
-// Copyright 2013 The Go-SQLite Authors. All rights reserved.
+// Copyright 2018 The go-sqlite-lite Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -20,12 +20,15 @@ package sqlite3
 #cgo CFLAGS: -DSQLITE_ENABLE_STAT3=1
 #cgo CFLAGS: -DSQLITE_OMIT_AUTHORIZATION=1
 #cgo CFLAGS: -DSQLITE_OMIT_AUTOINIT=1
+#cgo CFLAGS: -DSQLITE_OMIT_DEPRECATED=1
+#cgo CFLAGS: -DSQLITE_OMIT_PROGRESS_CALLBACK=1
 #cgo CFLAGS: -DSQLITE_OMIT_LOAD_EXTENSION=1
 #cgo CFLAGS: -DSQLITE_OMIT_TRACE=1
 #cgo CFLAGS: -DSQLITE_OMIT_UTF16=1
 #cgo CFLAGS: -DSQLITE_SOUNDEX=1
 #cgo CFLAGS: -DSQLITE_TEMP_STORE=2
 #cgo CFLAGS: -DSQLITE_THREADSAFE=2
+#cgo CFLAGS: -DSQLITE_USE_ALLOCA=1
 #cgo CFLAGS: -DSQLITE_USE_URI=1
 
 // Fix for BusyTimeout on *nix systems.
@@ -114,7 +117,7 @@ type Conn struct {
 // [https://www.sqlite.org/c3ref/open.html]
 func Open(name string, flagArgs ...int) (*Conn, error) {
 	if len(flagArgs) > 1 {
-		pkgErr(MISUSE, "too many arguments provided to Open")
+		return nil, pkgErr(MISUSE, "too many arguments provided to Open")
 	}
 
 	if initErr != nil {
@@ -433,10 +436,6 @@ func (s *Stmt) ColumnCount() int {
 	return int(C.sqlite3_column_count(s.stmt))
 }
 
-// unnamedVars is assigned to Stmt.varNames if the prepared statement does not
-// use named parameters. It just causes s.varNames == nil to evaluate to false.
-var unnamedVars = make([]string, 0, 1)
-
 // // Params returns the names of bound parameters in the prepared statement. Nil
 // // is returned if the statement does not use named parameters.
 // // [https://www.sqlite.org/c3ref/bind_parameter_name.html]
@@ -469,7 +468,8 @@ func (s *Stmt) ColumnName(i int) string {
 	return C.GoString(C.sqlite3_column_name(s.stmt, C.int(i)))
 }
 
-// Columns returns the names of columns produced by the prepared statement.
+// ColumnsNames returns the names of columns produced by the prepared
+// statement.
 // [https://www.sqlite.org/c3ref/column_name.html]
 func (s *Stmt) ColumnNames() []string {
 	nCols := s.ColumnCount()
@@ -558,9 +558,9 @@ func (s *Stmt) Bind(args ...interface{}) error {
 			if i != 0 || len(args) != 1 {
 				return pkgErr(MISUSE, "RowArgs must be used as the only argument to Bind()")
 			}
-			return s.bindNamed(NamedArgs(v))
+			return s.bindNamed(v)
 		default:
-			return pkgErr(MISUSE, "unsupported type at index %d (%T)", int(i), v)
+			return pkgErr(MISUSE, "unsupported type at index %d (%T)", i, v)
 		}
 		if rc != OK {
 			return errStr(rc)
@@ -632,7 +632,7 @@ func (s *Stmt) bindNamed(args NamedArgs) error {
 
 		var rc C.int
 		if v == nil {
-			rc = C.sqlite3_bind_null(s.stmt, C.int(i))
+			rc = C.sqlite3_bind_null(s.stmt, i)
 			if rc != OK {
 				return errStr(rc)
 			}
@@ -640,25 +640,25 @@ func (s *Stmt) bindNamed(args NamedArgs) error {
 		}
 		switch v := v.(type) {
 		case int:
-			rc = C.sqlite3_bind_int64(s.stmt, C.int(i), C.sqlite3_int64(v))
+			rc = C.sqlite3_bind_int64(s.stmt, i, C.sqlite3_int64(v))
 		case int64:
-			rc = C.sqlite3_bind_int64(s.stmt, C.int(i), C.sqlite3_int64(v))
+			rc = C.sqlite3_bind_int64(s.stmt, i, C.sqlite3_int64(v))
 		case float64:
-			rc = C.sqlite3_bind_double(s.stmt, C.int(i), C.double(v))
+			rc = C.sqlite3_bind_double(s.stmt, i, C.double(v))
 		case bool:
-			rc = C.sqlite3_bind_int64(s.stmt, C.int(i), C.sqlite3_int64(cBool(v)))
+			rc = C.sqlite3_bind_int64(s.stmt, i, C.sqlite3_int64(cBool(v)))
 		case string:
-			rc = C.bind_text(s.stmt, C.int(i), cStr(v), C.int(len(v)), 1)
+			rc = C.bind_text(s.stmt, i, cStr(v), C.int(len(v)), 1)
 		case []byte:
-			rc = C.bind_blob(s.stmt, C.int(i), cBytes(v), C.int(len(v)), 1)
+			rc = C.bind_blob(s.stmt, i, cBytes(v), C.int(len(v)), 1)
 		case time.Time:
-			rc = C.sqlite3_bind_int64(s.stmt, C.int(i), C.sqlite3_int64(v.Unix()))
+			rc = C.sqlite3_bind_int64(s.stmt, i, C.sqlite3_int64(v.Unix()))
 		case RawString:
-			rc = C.bind_text(s.stmt, C.int(i), cStr(string(v)), C.int(len(v)), 0)
+			rc = C.bind_text(s.stmt, i, cStr(string(v)), C.int(len(v)), 0)
 		case RawBytes:
-			rc = C.bind_blob(s.stmt, C.int(i), cBytes(v), C.int(len(v)), 0)
+			rc = C.bind_blob(s.stmt, i, cBytes(v), C.int(len(v)), 0)
 		case ZeroBlob:
-			rc = C.sqlite3_bind_zeroblob(s.stmt, C.int(i), C.int(v))
+			rc = C.sqlite3_bind_zeroblob(s.stmt, i, C.int(v))
 		default:
 			return pkgErr(MISUSE, "unsupported type for %s (%T)", name, v)
 		}

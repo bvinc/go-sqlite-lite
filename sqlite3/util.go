@@ -1,4 +1,4 @@
-// Copyright 2013 The Go-SQLite Authors. All rights reserved.
+// Copyright 2018 The go-sqlite-lite Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -26,21 +26,33 @@ import (
 // [http://www.sqlite.org/lang_expr.html#varparam]
 type NamedArgs map[string]interface{}
 
-// RawString and RawBytes are special string and []byte types that may be used
-// for database input and output without the cost of an extra copy operation.
-//
-// When used as an argument to a statement, the contents are bound using
-// SQLITE_STATIC instead of SQLITE_TRANSIENT flag. This requires the contents to
-// remain valid and unmodified until the end of statement execution. In
-// particular, the caller must keep a reference to the value to prevent it from
-// being garbage collected.
-//
-// When used for retrieving query output, the internal string/[]byte pointer is
-// set to reference memory belonging to SQLite. The memory remains valid until
-// another method is called on the Stmt object and should not be modified.
 type (
+	// RawString is a special string type that may be used for database input and
+	// output without the cost of an extra copy operation.
+	//
+	// When used as an argument to a statement, the contents are bound using
+	// SQLITE_STATIC instead of SQLITE_TRANSIENT flag. This requires the contents to
+	// remain valid and unmodified until the end of statement execution. In
+	// particular, the caller must keep a reference to the value to prevent it from
+	// being garbage collected.
+	//
+	// When used for retrieving query output, the internal string pointer is set
+	// to reference memory belonging to SQLite. The memory remains valid until
+	// another method is called on the Stmt object and should not be modified.
 	RawString string
-	RawBytes  []byte
+	// RawBytes is a special string type that may be used for database input and
+	// output without the cost of an extra copy operation.
+	//
+	// When used as an argument to a statement, the contents are bound using
+	// SQLITE_STATIC instead of SQLITE_TRANSIENT flag. This requires the contents to
+	// remain valid and unmodified until the end of statement execution. In
+	// particular, the caller must keep a reference to the value to prevent it from
+	// being garbage collected.
+	//
+	// When used for retrieving query output, the internal []byte pointer is set
+	// to reference memory belonging to SQLite. The memory remains valid until
+	// another method is called on the Stmt object and should not be modified.
+	RawBytes []byte
 )
 
 // Copy returns a Go-managed copy of s.
