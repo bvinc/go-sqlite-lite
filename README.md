@@ -32,6 +32,7 @@ err = conn.Exec(`CREATE TABLE student(name STRING, age INTEGER)`)
 if err != nil {
 	...
 }
+// Exec can optionally bind parameters
 err = conn.Exec(`INSERT INTO student VALUES (?, ?)`, "Bob", 18)
 if err != nil {
 	...
