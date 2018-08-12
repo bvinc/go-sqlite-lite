@@ -133,7 +133,9 @@ This driver was forked from `mxk/go-sqlite-driver`.  It hasn't been maintained i
 go-sqlite-lite is as thread safe as SQLite.  SQLite with this driver is compiled with `-DSQLITE_THREADSAFE=2` which is **Multi-thread** mode.  In this mode, SQLite can be safely used by multiple threads provided that no single database connection is used simultaneously in two or more threads.  Consult the SQLite documentation for more information.
 
 https://www.sqlite.org/threadsafe.html
+
 https://www.sqlite.org/sharedcache.html
+
 https://www.sqlite.org/wal.html
 
 ## License
