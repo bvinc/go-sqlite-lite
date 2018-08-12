@@ -5,7 +5,7 @@ go-sqlite-lite is a SQLite driver for the Go programming language.  It is design
 * **Lightweight** - Methods should be little more than a small wrapper around SQLite C functions.
 * **Performance** - Where possible, methods should be available to allow for the highest peformance possible.
 * **Understandable** - You should always know what SQLite functions are being called and in what order.
-* **Unsurprising** - Connections, PRAGMAs, transactions, binding, and stepping should work out of the box exactly as you would expect with SQLite.
+* **Unsurprising** - Connections, PRAGMAs, transactions, bindings, and stepping should work out of the box exactly as you would expect with SQLite.
 * **Debugable** - When you encounter a SQLite error, the SQLite documentation should be relevant and relatable to the Go code.
 * **Ergonomic** - Where it makes sense, convenient compound methods should exist to make tasks easy.
 
@@ -76,7 +76,7 @@ if err != nil {
 ### Using Queries Conveniently
 ```go
 // Prepare can prepare a statement and optionally also bind arguments
-stmt, err := conn.Prepare(`SELECT * FROM student WHERE age = ?`, 18)
+stmt, err := conn.Prepare(`SELECT name, age FROM student WHERE age = ?`, 18)
 if err != nil {
 	...
 }
