@@ -126,7 +126,7 @@ If a `database/sql` interface is required, please use https://github.com/mattn/g
 
 * **What are the differences betwen this driver and the mxk/go-sqlite driver?**
 
-This driver was forked from `mxk/go-sqlite-driver`.  It hasn't been maintained in years and used an ancient version of SQLite.  A large number of features were removed, reworked, and renamed.  A lot of smartness and state was removed.  It is now much easier to upgrade to newer versions of SQLite since the `codec` feature was removed.  The behavior of methods now lines up closely with the behavior of SQLite's C API.
+This driver was forked from `mxk/go-sqlite-driver`.  It hadn't been maintained in years and used an ancient version of SQLite.  A large number of features were removed, reworked, and renamed.  A lot of smartness and state was removed.  It is now much easier to upgrade to newer versions of SQLite since the `codec` feature was removed.  The behavior of methods now lines up closely with the behavior of SQLite's C API.
 
 * **Is it thread safe?**
 
