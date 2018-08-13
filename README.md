@@ -132,9 +132,32 @@ This driver was forked from `mxk/go-sqlite-driver`.  It hadn't been maintained i
 
 * **Is it thread safe?**
 
-go-sqlite-lite is as thread safe as SQLite.  SQLite with this driver is compiled with `-DSQLITE_THREADSAFE=2` which is **Multi-thread** mode.  In this mode, SQLite can be safely used by multiple threads provided that no single database connection is used simultaneously in two or more threads.  Consult the SQLite documentation for more information.
+go-sqlite-lite is as thread safe as SQLite.  SQLite with this driver is compiled with `-DSQLITE_THREADSAFE=2` which is **Multi-thread** mode.  In this mode, SQLite can be safely used by multiple threads provided that no single database connection is used simultaneously in two or more threads.  This applies to goroutines.  A single database conneciton should not be used simultaneously between two goroutines.
+
+It is safe to use separate connection instances
+concurrently, even if they are accessing the same database file. For example:
+```go
+// ERROR (without any extra synchronization)
+c, _ := sqlite3.Open("sqlite.db")
+go use(c)
+go use(c)
+
+// OK
+c1, _ := sqlite3.Open("sqlite.db")
+c2, _ := sqlite3.Open("sqlite.db")
+go use(c1)
+go use(c2)
+```
+
+Consult the SQLite documentation for more information.
 
 https://www.sqlite.org/threadsafe.html
+
+* **How do I pool connections for handling HTTP requestions?**
+
+Opening new connections is cheap and connection pooling is generally unnecessary for SQLite.  I would recommend that you open a new connection for each request that you're handling.  This ensures that each request is handled separately and the normal rules of SQLite database/table locking apply.
+
+If you've decided that pooling connections provides you with an advantage, it would be outside the scope of this package and something that you would need to implement and ensure works as needed.
 
 ## License
 This project is licensed under the BSD license.
