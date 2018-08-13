@@ -1,3 +1,5 @@
+[![GoDoc](https://godoc.org/github.com/bvinc/go-sqlite-lite/sqlite3)]
+
 # go-sqlite-lite
 
 go-sqlite-lite is a SQLite driver for the Go programming language.  It is designed with the following goals in mind.
