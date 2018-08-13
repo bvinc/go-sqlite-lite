@@ -124,7 +124,7 @@ This project begain as a fork of https://github.com/mxk/go-sqlite/
 
 * **Why is there no `database/sql` interface?**
 
-If a `database/sql` interface is required, please use https://github.com/mattn/go-sqlite3 .  In my experience, using a `database/sql` interface with SQLite is painful.  Connection pooling causes unnecessary overhead and wierdness.  Transactions using `Exec("BEGIN")` don't work as expected.  Your connection does not correspond to SQLite's concept of a connection.  PRAGMA commands do not work as expected.  When you hit SQLite errors, such as locking or busy errors, it's difficult to discover why since you don't know which connection received which SQL and in what order.
+If a `database/sql` interface is required, please use https://github.com/mattn/go-sqlite3 .  In my experience, using a `database/sql` interface with SQLite is painful.  Connection pooling causes unnecessary overhead and weirdness.  Transactions using `Exec("BEGIN")` don't work as expected.  Your connection does not correspond to SQLite's concept of a connection.  PRAGMA commands do not work as expected.  When you hit SQLite errors, such as locking or busy errors, it's difficult to discover why since you don't know which connection received which SQL and in what order.
 
 * **What are the differences betwen this driver and the mxk/go-sqlite driver?**
 
