@@ -153,7 +153,7 @@ Consult the SQLite documentation for more information.
 
 https://www.sqlite.org/threadsafe.html
 
-* **How do I pool connections for handling HTTP requestions?**
+* **How do I pool connections for handling HTTP requests?**
 
 Opening new connections is cheap and connection pooling is generally unnecessary for SQLite.  I would recommend that you open a new connection for each request that you're handling.  This ensures that each request is handled separately and the normal rules of SQLite database/table locking apply.
 
