@@ -1,4 +1,4 @@
-[![GoDoc](https://godoc.org/github.com/bvinc/go-sqlite-lite/sqlite3)]
+Go documentation reference: https://godoc.org/github.com/bvinc/go-sqlite-lite/sqlite3
 
 # go-sqlite-lite
 
