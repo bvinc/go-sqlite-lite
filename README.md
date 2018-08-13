@@ -141,7 +141,8 @@ concurrently, even if they are accessing the same database file. For example:
 c, _ := sqlite3.Open("sqlite.db")
 go use(c)
 go use(c)
-
+```
+```go
 // OK
 c1, _ := sqlite3.Open("sqlite.db")
 c2, _ := sqlite3.Open("sqlite.db")
