@@ -23,7 +23,7 @@ import (
 //
 // It is not possible to mix named and anonymous ("?") parameters in the same
 // statement.
-// [http://www.sqlite.org/lang_expr.html#varparam]
+// https://www.sqlite.org/lang_expr.html#varparam
 type NamedArgs map[string]interface{}
 
 type (
@@ -133,7 +133,7 @@ var (
 
 // Complete returns true if sql appears to contain a complete statement that is
 // ready to be parsed. This does not validate the statement syntax.
-// [http://www.sqlite.org/c3ref/complete.html]
+// https://www.sqlite.org/c3ref/complete.html
 func Complete(sql string) bool {
 	if initErr != nil {
 		return false
@@ -148,7 +148,7 @@ func Complete(sql string) bool {
 //
 // This function is currently a no-op because SQLite is not compiled with the
 // SQLITE_ENABLE_MEMORY_MANAGEMENT option.
-// [http://www.sqlite.org/c3ref/release_memory.html]
+// https://www.sqlite.org/c3ref/release_memory.html
 func ReleaseMemory(n int) int {
 	if initErr != nil {
 		return 0
@@ -160,7 +160,7 @@ func ReleaseMemory(n int) int {
 // that may be allocated by SQLite. A negative value for n keeps the current
 // limit, while 0 removes the limit. The previous limit value is returned, with
 // negative values indicating an error.
-// [http://www.sqlite.org/c3ref/soft_heap_limit64.html]
+// https://www.sqlite.org/c3ref/soft_heap_limit64.html
 func SoftHeapLimit(n int64) int64 {
 	if initErr != nil {
 		return -1
@@ -170,7 +170,7 @@ func SoftHeapLimit(n int64) int64 {
 
 // SourceID returns the check-in identifier of SQLite within its configuration
 // management system.
-// [http://www.sqlite.org/c3ref/c_source_id.html]
+// https://www.sqlite.org/c3ref/c_source_id.html
 func SourceID() string {
 	if initErr != nil {
 		return ""
@@ -181,7 +181,7 @@ func SourceID() string {
 // Status returns the current and peak values of a core performance
 // counter, specified by one of the STATUS constants. If reset is true, the peak
 // value is reset back down to the current value after retrieval.
-// [http://www.sqlite.org/c3ref/status.html]
+// https://www.sqlite.org/c3ref/status.html
 func Status(op int, reset bool) (cur, peak int, err error) {
 	if initErr != nil {
 		return 0, 0, initErr
@@ -195,7 +195,7 @@ func Status(op int, reset bool) (cur, peak int, err error) {
 }
 
 // Version returns the SQLite version as a string in the format "X.Y.Z[.N]".
-// [http://www.sqlite.org/c3ref/libversion.html]
+// https://www.sqlite.org/c3ref/libversion.html
 func Version() string {
 	if initErr != nil {
 		return ""

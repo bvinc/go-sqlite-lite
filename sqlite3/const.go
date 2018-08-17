@@ -10,7 +10,7 @@ package sqlite3
 import "C"
 
 // Fundamental SQLite data types. These are returned by Stmt.DataTypes method.
-// [http://www.sqlite.org/c3ref/c_blob.html]
+// https://www.sqlite.org/c3ref/c_blob.html
 const (
 	INTEGER = C.SQLITE_INTEGER // 1
 	FLOAT   = C.SQLITE_FLOAT   // 2
@@ -20,7 +20,7 @@ const (
 )
 
 // Flags that can be provided to Open
-// [https://www.sqlite.org/c3ref/open.html]
+// https://www.sqlite.org/c3ref/open.html
 const (
 	OPEN_READONLY       = C.SQLITE_OPEN_READONLY       // Ok for sqlite3_open_v2()
 	OPEN_READWRITE      = C.SQLITE_OPEN_READWRITE      // Ok for sqlite3_open_v2()
@@ -48,7 +48,7 @@ const (
 // OK and ROW become nil, and DONE becomes either nil or io.EOF, depending on
 // the context in which the statement is executed. All other codes are returned
 // via the Error struct.
-// [http://www.sqlite.org/c3ref/c_abort.html]
+// https://www.sqlite.org/c3ref/c_abort.html
 const (
 	OK         = C.SQLITE_OK         // 0   = Successful result
 	ERROR      = C.SQLITE_ERROR      // 1   = SQL error or missing database
@@ -86,7 +86,7 @@ const (
 // Extended result codes returned by the SQLite API. Extended result codes are
 // enabled by default for all new Conn objects. Use Error.Code()&0xFF to convert
 // an extended code to a general one.
-// [http://www.sqlite.org/c3ref/c_abort_rollback.html]
+// https://www.sqlite.org/c3ref/c_abort_rollback.html
 const (
 	IOERR_READ              = C.SQLITE_IOERR_READ              // (SQLITE_IOERR | (1<<8))
 	IOERR_SHORT_READ        = C.SQLITE_IOERR_SHORT_READ        // (SQLITE_IOERR | (2<<8))
@@ -144,7 +144,7 @@ const (
 
 // Codes used by SQLite to indicate the operation type when invoking authorizer
 // and row update callbacks.
-// [http://www.sqlite.org/c3ref/c_alter_table.html]
+// https://www.sqlite.org/c3ref/c_alter_table.html
 const (
 	CREATE_INDEX        = C.SQLITE_CREATE_INDEX        // 1
 	CREATE_TABLE        = C.SQLITE_CREATE_TABLE        // 2
@@ -182,7 +182,7 @@ const (
 )
 
 // Core SQLite performance counters that can be queried with Status.
-// [http://www.sqlite.org/c3ref/c_status_malloc_count.html]
+// https://www.sqlite.org/c3ref/c_status_malloc_count.html
 const (
 	STATUS_MEMORY_USED        = C.SQLITE_STATUS_MEMORY_USED        // 0
 	STATUS_PAGECACHE_USED     = C.SQLITE_STATUS_PAGECACHE_USED     // 1
@@ -197,7 +197,7 @@ const (
 )
 
 // Connection performance counters that can be queried with Conn.Status.
-// [http://www.sqlite.org/c3ref/c_dbstatus_options.html]
+// https://www.sqlite.org/c3ref/c_dbstatus_options.html
 const (
 	DBSTATUS_LOOKASIDE_USED      = C.SQLITE_DBSTATUS_LOOKASIDE_USED      // 0
 	DBSTATUS_CACHE_USED          = C.SQLITE_DBSTATUS_CACHE_USED          // 1
@@ -213,7 +213,7 @@ const (
 )
 
 // Statement performance counters that can be queried with Stmt.Status.
-// [http://www.sqlite.org/c3ref/c_stmtstatus_counter.html]
+// https://www.sqlite.org/c3ref/c_stmtstatus_counter.html
 const (
 	STMTSTATUS_FULLSCAN_STEP = C.SQLITE_STMTSTATUS_FULLSCAN_STEP // 1
 	STMTSTATUS_SORT          = C.SQLITE_STMTSTATUS_SORT          // 2
@@ -222,7 +222,7 @@ const (
 )
 
 // Per-connection limits that can be queried and changed with Conn.Limit.
-// [http://www.sqlite.org/c3ref/c_limit_attached.html]
+// https://www.sqlite.org/c3ref/c_limit_attached.html
 const (
 	LIMIT_LENGTH              = C.SQLITE_LIMIT_LENGTH              // 0
 	LIMIT_SQL_LENGTH          = C.SQLITE_LIMIT_SQL_LENGTH          // 1

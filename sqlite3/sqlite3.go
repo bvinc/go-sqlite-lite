@@ -6,8 +6,8 @@ package sqlite3
 
 /*
 // SQLite compilation options.
-// [https://www.sqlite.org/compile.html]
-// [https://www.sqlite.org/footprint.html]
+// https://www.sqlite.org/compile.html
+// https://www.sqlite.org/footprint.html
 #cgo CFLAGS: -std=gnu99
 #cgo CFLAGS: -Os
 #cgo CFLAGS: -DNDEBUG=1
@@ -95,21 +95,21 @@ var initErr error
 
 func init() {
 	// Initialize SQLite (required with SQLITE_OMIT_AUTOINIT).
-	// [https://www.sqlite.org/c3ref/initialize.html]
+	// https://www.sqlite.org/c3ref/initialize.html
 	if rc := C.sqlite3_initialize(); rc != OK {
 		initErr = errStr(rc)
 		return
 	}
 
 	// Use the same temporary directory as Go.
-	// [https://www.sqlite.org/c3ref/temp_directory.html]
+	// https://www.sqlite.org/c3ref/temp_directory.html
 	tmp := os.TempDir() + "\x00"
 	C.set_temp_dir(cStr(tmp))
 }
 
 // Conn is a connection handle, which may have multiple databases attached to it
 // by using the ATTACH SQL statement.
-// [https://www.sqlite.org/c3ref/sqlite3.html]
+// https://www.sqlite.org/c3ref/sqlite3.html
 type Conn struct {
 	db *C.sqlite3
 }
@@ -120,7 +120,7 @@ type Conn struct {
 // which creates a temporary in-memory database, or 4) an empty string, which
 // creates a temporary on-disk database (deleted when closed) in the directory
 // returned by os.TempDir(). Flags to Open can optionally be provided.
-// [https://www.sqlite.org/c3ref/open.html]
+// https://www.sqlite.org/c3ref/open.html
 func Open(name string, flagArgs ...int) (*Conn, error) {
 	if len(flagArgs) > 1 {
 		return nil, pkgErr(MISUSE, "too many arguments provided to Open")
@@ -154,7 +154,7 @@ func Open(name string, flagArgs ...int) (*Conn, error) {
 // returned if the connection is left in this "zombie" status, which may
 // indicate a programming error where some previously allocated resource is not
 // properly released.
-// [https://www.sqlite.org/c3ref/close.html]
+// https://www.sqlite.org/c3ref/close.html
 func (c *Conn) Close() error {
 	if db := c.db; db != nil {
 		c.db = nil
@@ -175,7 +175,7 @@ func (c *Conn) Close() error {
 // this function can also bind arguments to the returned statement.  If an
 // error occurs during binding, the statement is closed/finalized and the error
 // is returned.
-// [https://www.sqlite.org/c3ref/prepare.html]
+// https://www.sqlite.org/c3ref/prepare.html
 func (c *Conn) Prepare(sql string, args ...interface{}) (s *Stmt, err error) {
 	zSQL := sql + "\x00"
 
@@ -214,7 +214,7 @@ func (c *Conn) Prepare(sql string, args ...interface{}) (s *Stmt, err error) {
 // are given.  If arguments are given, it's simply a convenient way to
 // Prepare a statement, Bind arguments, Step the statement to completion,
 // and Close/finalize the statement.
-// [https://www.sqlite.org/c3ref/exec.html]
+// https://www.sqlite.org/c3ref/exec.html
 func (c *Conn) Exec(sql string, args ...interface{}) error {
 	// Fast path via sqlite3_exec, which doesn't support parameter binding
 	if len(args) == 0 {
@@ -244,21 +244,21 @@ func (c *Conn) Exec(sql string, args ...interface{}) error {
 
 // Begin starts a new deferred transaction. This is equivalent to
 // c.Exec("BEGIN")
-// [https://www.sqlite.org/lang_transaction.html]
+// https://www.sqlite.org/lang_transaction.html
 func (c *Conn) Begin() error {
 	return c.exec(cStr("BEGIN\x00"))
 }
 
 // BeginImmediate starts a new deferred transaction. This is equivalent to
 // c.Exec("BEGIN IMMEDIATE")
-// [https://www.sqlite.org/lang_transaction.html]
+// https://www.sqlite.org/lang_transaction.html
 func (c *Conn) BeginImmediate() error {
 	return c.exec(cStr("BEGIN IMMEDIATE\x00"))
 }
 
 // BeginExclusive starts a new deferred transaction. This is equivalent to
 // c.Exec("BEGIN EXCLUSIVE")
-// [https://www.sqlite.org/lang_transaction.html]
+// https://www.sqlite.org/lang_transaction.html
 func (c *Conn) BeginExclusive() error {
 	return c.exec(cStr("BEGIN EXCLUSIVE\x00"))
 }
@@ -278,7 +278,7 @@ func (c *Conn) Rollback() error {
 // different from the one that is currently running the database operation, but
 // it is not safe to call this method on a connection that might close before
 // the call returns.
-// [https://www.sqlite.org/c3ref/interrupt.html]
+// https://www.sqlite.org/c3ref/interrupt.html
 func (c *Conn) Interrupt() {
 	if db := c.db; db != nil {
 		C.sqlite3_interrupt(db)
@@ -287,14 +287,14 @@ func (c *Conn) Interrupt() {
 
 // AutoCommit returns true if the database connection is in auto-commit mode
 // (i.e. outside of an explicit transaction started by BEGIN).
-// [https://www.sqlite.org/c3ref/get_autocommit.html]
+// https://www.sqlite.org/c3ref/get_autocommit.html
 func (c *Conn) AutoCommit() bool {
 	return C.sqlite3_get_autocommit(c.db) != 0
 }
 
 // LastInsertRowID returns the ROWID of the most recent successful INSERT
 // statement.
-// [https://www.sqlite.org/c3ref/last_insert_rowid.html]
+// https://www.sqlite.org/c3ref/last_insert_rowid.html
 func (c *Conn) LastInsertRowID() int64 {
 	return int64(C.sqlite3_last_insert_rowid(c.db))
 }
@@ -302,7 +302,7 @@ func (c *Conn) LastInsertRowID() int64 {
 // Changes returns the number of rows that were changed, inserted, or deleted
 // by the most recent statement. Auxiliary changes caused by triggers or
 // foreign key actions are not counted.
-// [https://www.sqlite.org/c3ref/changes.html]
+// https://www.sqlite.org/c3ref/changes.html
 func (c *Conn) Changes() int {
 	return int(C.sqlite3_changes(c.db))
 }
@@ -310,7 +310,7 @@ func (c *Conn) Changes() int {
 // TotalChanges returns the number of rows that were changed, inserted, or
 // deleted since the database connection was opened, including changes caused by
 // trigger and foreign key actions.
-// [https://www.sqlite.org/c3ref/total_changes.html]
+// https://www.sqlite.org/c3ref/total_changes.html
 func (c *Conn) TotalChanges() int {
 	return int(C.sqlite3_total_changes(c.db))
 }
@@ -323,7 +323,7 @@ func (c *Conn) TotalChanges() int {
 // during a call to Backup.Step. The source connection may be used for other
 // purposes between these calls. The destination connection must not be used for
 // anything until the backup is closed.
-// [https://www.sqlite.org/backup.html]
+// https://www.sqlite.org/backup.html
 func (c *Conn) Backup(srcName string, dst *Conn, dstName string) (*Backup, error) {
 	if c == dst || dst == nil {
 		return nil, ErrBadConn
@@ -341,7 +341,7 @@ func (c *Conn) Backup(srcName string, dst *Conn, dstName string) (*Backup, error
 // read-only. It is not possible to open a column that is part of an index or
 // primary key for writing. If foreign key constraints are enabled, it is not
 // possible to open a column that is part of a child key for writing.
-// [https://www.sqlite.org/c3ref/blob_open.html]
+// https://www.sqlite.org/c3ref/blob_open.html
 func (c *Conn) BlobIO(db, tbl, col string, row int64, rw bool) (*BlobIO, error) {
 	return newBlobIO(c, db, tbl, col, row, rw)
 }
@@ -350,14 +350,14 @@ func (c *Conn) BlobIO(db, tbl, col string, row int64, rw bool) (*BlobIO, error) 
 // locking operation for the specified duration before aborting. It returns the
 // callback function that was previously registered with Conn.BusyFunc, if any.
 // The busy handler is disabled if d is negative or zero.
-// [https://www.sqlite.org/c3ref/busy_timeout.html]
+// https://www.sqlite.org/c3ref/busy_timeout.html
 func (c *Conn) BusyTimeout(d time.Duration) {
 	C.sqlite3_busy_timeout(c.db, C.int(d/time.Millisecond))
 }
 
 // FileName returns the full file path of an attached database. An empty string
 // is returned for temporary databases.
-// [https://www.sqlite.org/c3ref/db_filename.html]
+// https://www.sqlite.org/c3ref/db_filename.html
 func (c *Conn) FileName(db string) string {
 	db += "\x00"
 	if path := C.sqlite3_db_filename(c.db, cStr(db)); path != nil {
@@ -369,7 +369,7 @@ func (c *Conn) FileName(db string) string {
 // Status returns the current and peak values of a connection performance
 // counter, specified by one of the DBSTATUS constants. If reset is true, the
 // peak value is reset back down to the current value after retrieval.
-// [https://www.sqlite.org/c3ref/db_status.html]
+// https://www.sqlite.org/c3ref/db_status.html
 func (c *Conn) Status(op int, reset bool) (cur, peak int, err error) {
 	var cCur, cPeak C.int
 	rc := C.sqlite3_db_status(c.db, C.int(op), &cCur, &cPeak, cBool(reset))
@@ -382,7 +382,7 @@ func (c *Conn) Status(op int, reset bool) (cur, peak int, err error) {
 // Limit changes a per-connection resource usage or performance limit, specified
 // by one of the LIMIT constants, returning its previous value. If the new value
 // is negative, the limit is left unchanged and its current value is returned.
-// [https://www.sqlite.org/c3ref/limit.html]
+// https://www.sqlite.org/c3ref/limit.html
 func (c *Conn) Limit(id, value int) (prev int) {
 	prev = int(C.sqlite3_limit(c.db, C.int(id), C.int(value)))
 	return
@@ -397,7 +397,7 @@ func (c *Conn) exec(sql *C.char) error {
 }
 
 // Stmt is a prepared statement handle.
-// [https://www.sqlite.org/c3ref/stmt.html]
+// https://www.sqlite.org/c3ref/stmt.html
 type Stmt struct {
 	stmt *C.sqlite3_stmt
 	Tail string
@@ -405,7 +405,7 @@ type Stmt struct {
 
 // Close releases all resources associated with the prepared statement. This
 // method can be called at any point in the statement's life cycle.
-// [https://www.sqlite.org/c3ref/finalize.html]
+// https://www.sqlite.org/c3ref/finalize.html
 func (s *Stmt) Close() error {
 	rc := C.sqlite3_finalize(s.stmt)
 	s.stmt = nil
@@ -423,28 +423,28 @@ func (s *Stmt) Busy() bool {
 
 // ReadOnly returns true if the prepared statement makes no direct changes to
 // the content of the database file.
-// [https://www.sqlite.org/c3ref/stmt_readonly.html]
+// https://www.sqlite.org/c3ref/stmt_readonly.html
 func (s *Stmt) ReadOnly() bool {
 	return C.sqlite3_stmt_readonly(s.stmt) != 0
 }
 
 // BindParameterCount returns the number of SQL parameters in the prepared
 // statement.
-// [https://www.sqlite.org/c3ref/bind_parameter_count.html]
+// https://www.sqlite.org/c3ref/bind_parameter_count.html
 func (s *Stmt) BindParameterCount() int {
 	return int(C.sqlite3_bind_parameter_count(s.stmt))
 }
 
 // ColumnCount returns the number of columns produced by the prepared
 // statement.
-// [https://www.sqlite.org/c3ref/column_count.html]
+// https://www.sqlite.org/c3ref/column_count.html
 func (s *Stmt) ColumnCount() int {
 	return int(C.sqlite3_column_count(s.stmt))
 }
 
 // // Params returns the names of bound parameters in the prepared statement. Nil
 // // is returned if the statement does not use named parameters.
-// // [https://www.sqlite.org/c3ref/bind_parameter_name.html]
+// // https://www.sqlite.org/c3ref/bind_parameter_name.html
 // func (s *Stmt) Params() []string {
 // 	if s.varNames == nil {
 // 		var names []string
@@ -469,14 +469,14 @@ func (s *Stmt) ColumnCount() int {
 
 // ColumnName returns the name of column produced by the prepared statement.
 // The leftmost column is number 0.
-// [https://www.sqlite.org/c3ref/column_name.html]
+// https://www.sqlite.org/c3ref/column_name.html
 func (s *Stmt) ColumnName(i int) string {
 	return C.GoString(C.sqlite3_column_name(s.stmt, C.int(i)))
 }
 
 // ColumnsNames returns the names of columns produced by the prepared
 // statement.
-// [https://www.sqlite.org/c3ref/column_name.html]
+// https://www.sqlite.org/c3ref/column_name.html
 func (s *Stmt) ColumnNames() []string {
 	nCols := s.ColumnCount()
 	names := make([]string, nCols)
@@ -488,14 +488,14 @@ func (s *Stmt) ColumnNames() []string {
 
 // DeclType returns the type declaration of columns produced by the prepared
 // statement. The leftmost column is number 0.
-// [https://www.sqlite.org/c3ref/column_decltype.html]
+// https://www.sqlite.org/c3ref/column_decltype.html
 func (s *Stmt) DeclType(i int) string {
 	return C.GoString(C.sqlite3_column_decltype(s.stmt, C.int(i)))
 }
 
 // DeclTypes returns the type declarations of columns produced by the prepared
 // statement.
-// [https://www.sqlite.org/c3ref/column_decltype.html]
+// https://www.sqlite.org/c3ref/column_decltype.html
 func (s *Stmt) DeclTypes() []string {
 	nCols := s.ColumnCount()
 	declTypes := make([]string, nCols)
@@ -579,7 +579,7 @@ func (s *Stmt) Bind(args ...interface{}) error {
 // into successive arguments. If the last argument is an instance of RowMap,
 // then all remaining column/value pairs are assigned into the map. The same row
 // may be scanned multiple times. Nil arguments are silently skipped.
-// [https://www.sqlite.org/c3ref/column_blob.html]
+// https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) Scan(dst ...interface{}) error {
 	n := len(dst)
 	if n == 0 {
@@ -600,7 +600,7 @@ func (s *Stmt) Scan(dst ...interface{}) error {
 // re-executed. This should be done when the remaining rows returned by a query
 // are not needed, which releases some resources that would otherwise persist
 // until the next call to Exec or Query.
-// [https://www.sqlite.org/c3ref/reset.html]
+// https://www.sqlite.org/c3ref/reset.html
 func (s *Stmt) Reset() error {
 	if rc := C.sqlite3_reset(s.stmt); rc != OK {
 		return errStr(rc)
@@ -610,7 +610,7 @@ func (s *Stmt) Reset() error {
 
 // ClearBindings clears the bindings on a prepared statement.  Reset does not
 // clear bindings.
-// [https://www.sqlite.org/c3ref/clear_bindings.html]
+// https://www.sqlite.org/c3ref/clear_bindings.html
 func (s *Stmt) ClearBindings() error {
 	if rc := C.sqlite3_clear_bindings(s.stmt); rc != OK {
 		return errStr(rc)
@@ -621,7 +621,7 @@ func (s *Stmt) ClearBindings() error {
 // Status returns the current value of a statement performance counter,
 // specified by one of the STMTSTATUS constants. If reset is true, the value is
 // reset back down to 0 after retrieval.
-// [https://www.sqlite.org/c3ref/stmt_status.html]
+// https://www.sqlite.org/c3ref/stmt_status.html
 func (s *Stmt) Status(op int, reset bool) int {
 	return int(C.sqlite3_stmt_status(s.stmt, C.int(op), cBool(reset)))
 }
@@ -677,7 +677,7 @@ func (s *Stmt) bindNamed(args NamedArgs) error {
 
 // Step evaluates the next step in the statement's program.  It returns true if
 // if a new row of data is ready for processing.
-// [https://www.sqlite.org/c3ref/step.html]
+// https://www.sqlite.org/c3ref/step.html
 func (s *Stmt) Step() (bool, error) {
 	rc := C.sqlite3_step(s.stmt)
 	if rc == DONE {
@@ -690,7 +690,7 @@ func (s *Stmt) Step() (bool, error) {
 
 // StepToCompletion is a convenience method that repeatedly calls Step until no
 // more rows are returned or an error occurs.
-// [https://www.sqlite.org/c3ref/step.html]
+// https://www.sqlite.org/c3ref/step.html
 func (s *Stmt) StepToCompletion() error {
 	for {
 		rc := C.sqlite3_step(s.stmt)
@@ -708,7 +708,7 @@ func (s *Stmt) StepToCompletion() error {
 // ColumnType returns the data type code of column i in the current row (one of
 // INTEGER, FLOAT, TEXT, BLOB, or NULL). The value becomes undefined after a
 // type conversion.
-// [https://www.sqlite.org/c3ref/column_blob.html]
+// https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnType(i int) byte {
 	return byte(C.sqlite3_column_type(s.stmt, C.int(i)))
 }
@@ -717,7 +717,7 @@ func (s *Stmt) ColumnType(i int) byte {
 // Possible data types are INTEGER, FLOAT, TEXT, BLOB, and NULL. These
 // represent the actual storage classes used by SQLite to store each value
 // before any conversion.
-// [https://www.sqlite.org/c3ref/column_blob.html]
+// https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnTypes() []byte {
 	n := s.ColumnCount()
 	colTypes := make([]byte, n)

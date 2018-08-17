@@ -23,7 +23,7 @@ var ErrBlobFull = &Error{ERROR, "incremental write failed, no space left"}
 // reading and writing. The value length cannot be changed using this API; use
 // an UPDATE statement for that. The recommended way of allocating space for a
 // BLOB is to use the ZeroBlob type or the zeroblob() SQL function.
-// [http://www.sqlite.org/c3ref/blob.html]
+// https://www.sqlite.org/c3ref/blob.html
 type BlobIO struct {
 	conn *Conn
 	blob *C.sqlite3_blob
@@ -60,7 +60,7 @@ func newBlobIO(c *Conn, db, tbl, col string, row int64, rw bool) (*BlobIO, error
 // It is important to check the error returned by this method, since disk I/O
 // and other types of errors may not be reported until the changes are actually
 // committed to the database.
-// [http://www.sqlite.org/c3ref/blob_close.html]
+// https://www.sqlite.org/c3ref/blob_close.html
 func (b *BlobIO) Close() error {
 	if blob := b.blob; blob != nil {
 		b.blob = nil
@@ -90,13 +90,13 @@ func (b *BlobIO) Row() int64 {
 // indicated by an ABORT error code returned from Read or Write. An expired
 // handle is closed automatically and cannot be reopened. Any writes that
 // occurred before the abort are not rolled back.
-// [http://www.sqlite.org/c3ref/blob_bytes.html]
+// https://www.sqlite.org/c3ref/blob_bytes.html
 func (b *BlobIO) Len() int {
 	return b.len
 }
 
 // Read implements the io.Reader interface.
-// [http://www.sqlite.org/c3ref/blob_read.html]
+// https://www.sqlite.org/c3ref/blob_read.html
 func (b *BlobIO) Read(p []byte) (n int, err error) {
 	if b.blob == nil {
 		return 0, ErrBadIO
@@ -114,7 +114,7 @@ func (b *BlobIO) Read(p []byte) (n int, err error) {
 // Write implements the io.Writer interface. The number of bytes written is
 // always either 0 or len(p). ErrBlobFull is returned if there isn't enough
 // space left to write all of p.
-// [http://www.sqlite.org/c3ref/blob_write.html]
+// https://www.sqlite.org/c3ref/blob_write.html
 func (b *BlobIO) Write(p []byte) (n int, err error) {
 	if b.blob == nil {
 		return 0, ErrBadIO
@@ -152,7 +152,7 @@ func (b *BlobIO) Seek(offset int64, whence int) (ret int64, err error) {
 // Reopen closes the current value and opens another one in the same column,
 // specified by its ROWID. If an error is encountered, the I/O handle becomes
 // unusable and is automatically closed.
-// [http://www.sqlite.org/c3ref/blob_reopen.html]
+// https://www.sqlite.org/c3ref/blob_reopen.html
 func (b *BlobIO) Reopen(row int64) error {
 	if b.blob == nil {
 		return ErrBadIO
