@@ -8,7 +8,7 @@ go-sqlite-lite is a SQLite driver for the Go programming language.  It is design
 * **Performance** - Where possible, methods should be available to allow for the highest peformance possible.
 * **Understandable** - You should always know what SQLite functions are being called and in what order.
 * **Unsurprising** - Connections, PRAGMAs, transactions, bindings, and stepping should work out of the box exactly as you would expect with SQLite.
-* **Debugable** - When you encounter a SQLite error, the SQLite documentation should be relevant and relatable to the Go code.
+* **Debuggable** - When you encounter a SQLite error, the SQLite documentation should be relevant and relatable to the Go code.
 * **Ergonomic** - Where it makes sense, convenient compound methods should exist to make tasks easy and to conform to Go standard interfaces.
 
 Most database drivers include a layer to work nicely with the Go `database/sql` interface, which introduces connection pooling and behavior differences from pure SQLite.  This driver does not include a `database/sql` interface.
@@ -134,8 +134,7 @@ This driver was forked from `mxk/go-sqlite-driver`.  It hadn't been maintained i
 
 go-sqlite-lite is as thread safe as SQLite.  SQLite with this driver is compiled with `-DSQLITE_THREADSAFE=2` which is **Multi-thread** mode.  In this mode, SQLite can be safely used by multiple threads provided that no single database connection is used simultaneously in two or more threads.  This applies to goroutines.  A single database conneciton should not be used simultaneously between two goroutines.
 
-It is safe to use separate connection instances
-concurrently, even if they are accessing the same database file. For example:
+It is safe to use separate connection instances concurrently, even if they are accessing the same database file. For example:
 ```go
 // ERROR (without any extra synchronization)
 c, _ := sqlite3.Open("sqlite.db")
