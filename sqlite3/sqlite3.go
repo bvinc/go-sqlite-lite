@@ -249,14 +249,14 @@ func (c *Conn) Begin() error {
 	return c.exec(cStr("BEGIN\x00"))
 }
 
-// BeginImmediate starts a new deferred transaction. This is equivalent to
+// BeginImmediate starts a new immediate transaction. This is equivalent to
 // c.Exec("BEGIN IMMEDIATE")
 // https://www.sqlite.org/lang_transaction.html
 func (c *Conn) BeginImmediate() error {
 	return c.exec(cStr("BEGIN IMMEDIATE\x00"))
 }
 
-// BeginExclusive starts a new deferred transaction. This is equivalent to
+// BeginExclusive starts a new exclusive transaction. This is equivalent to
 // c.Exec("BEGIN EXCLUSIVE")
 // https://www.sqlite.org/lang_transaction.html
 func (c *Conn) BeginExclusive() error {
