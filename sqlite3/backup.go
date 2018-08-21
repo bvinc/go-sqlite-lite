@@ -14,7 +14,7 @@ import (
 )
 
 // Backup is a handle to an online backup operation between two databases.
-// [http://www.sqlite.org/c3ref/backup.html]
+// https://www.sqlite.org/c3ref/backup.html
 type Backup struct {
 	src  *Conn
 	dst  *Conn
@@ -38,7 +38,7 @@ func newBackup(src *Conn, srcName string, dst *Conn, dstName string) (*Backup, e
 
 // Close releases all resources associated with the backup operation. It is safe
 // to call this method prior to backup completion to abort the operation.
-// [http://www.sqlite.org/c3ref/backup_finish.html#sqlite3backupfinish]
+// https://www.sqlite.org/c3ref/backup_finish.html#sqlite3backupfinish
 func (b *Backup) Close() error {
 	if bkup := b.bkup; bkup != nil {
 		b.bkup = nil
@@ -59,7 +59,7 @@ func (b *Backup) Conn() (src, dst *Conn) {
 // Step copies up to n pages to the destination database. If n is negative, all
 // remaining pages are copied. io.EOF is returned upon successful backup
 // completion.
-// [http://www.sqlite.org/c3ref/backup_finish.html#sqlite3backupstep]
+// https://www.sqlite.org/c3ref/backup_finish.html#sqlite3backupstep
 func (b *Backup) Step(n int) error {
 	if b.bkup == nil {
 		return ErrBadBackup
@@ -79,7 +79,7 @@ func (b *Backup) Step(n int) error {
 // each call to Step and are reset to 0 after the backup is closed. The total
 // number of pages may change if the source database is modified during the
 // backup operation.
-// [http://www.sqlite.org/c3ref/backup_finish.html#sqlite3backupremaining]
+// https://www.sqlite.org/c3ref/backup_finish.html#sqlite3backupremaining
 func (b *Backup) Progress() (remaining, total int) {
 	if b.bkup != nil {
 		remaining = int(C.sqlite3_backup_remaining(b.bkup))
