@@ -119,7 +119,9 @@ type Conn struct {
 // described at https://www.sqlite.org/uri.html, 3) the string ":memory:",
 // which creates a temporary in-memory database, or 4) an empty string, which
 // creates a temporary on-disk database (deleted when closed) in the directory
-// returned by os.TempDir(). Flags to Open can optionally be provided.
+// returned by os.TempDir(). Flags to Open can optionally be provided.  If no
+// flags are provided, the default flags of OPEN_READWRITE|OPEN_CREATE are
+// used.
 // https://www.sqlite.org/c3ref/open.html
 func Open(name string, flagArgs ...int) (*Conn, error) {
 	if len(flagArgs) > 1 {
@@ -474,7 +476,7 @@ func (s *Stmt) ColumnName(i int) string {
 	return C.GoString(C.sqlite3_column_name(s.stmt, C.int(i)))
 }
 
-// ColumnsNames returns the names of columns produced by the prepared
+// ColumnNames returns the names of columns produced by the prepared
 // statement.
 // https://www.sqlite.org/c3ref/column_name.html
 func (s *Stmt) ColumnNames() []string {
