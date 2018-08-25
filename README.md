@@ -18,6 +18,7 @@ Most database drivers include a layer to work nicely with the Go `database/sql` 
 
 ## Releases
 
+* 2018-08-25 v0.1.1 - Fixed linking on some Linux systems
 * 2018-08-21 v0.1.0 - SQLite version 3.24.0
 
 ## Getting started
