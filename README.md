@@ -1,4 +1,7 @@
 [![GoDoc](https://godoc.org/github.com/bvinc/go-sqlite-lite/sqlite3?status.svg)](https://godoc.org/github.com/bvinc/go-sqlite-lite/sqlite3)
+[![Build Status](https://travis-ci.com/bvinc/go-sqlite-lite.svg?branch=master)](https://travis-ci.com/bvinc/go-sqlite-lite)
+[![Build status](https://ci.appveyor.com/api/projects/status/xk6fpk23wb5ppdhx?svg=true)](https://ci.appveyor.com/project/bvinc/go-sqlite-lite)
+
 
 # go-sqlite-lite
 
