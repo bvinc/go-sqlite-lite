@@ -176,3 +176,4 @@ If you've decided that pooling connections provides you with an advantage, it wo
 
 ## License
 This project is licensed under the BSD license.
+
