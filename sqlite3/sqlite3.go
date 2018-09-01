@@ -86,6 +86,7 @@ static void set_##x(sqlite3 *db, void *conn, int enable) { \
 import "C"
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -275,6 +276,79 @@ func (c *Conn) Commit() error {
 // Rollback aborts the current transaction without saving any changes.
 func (c *Conn) Rollback() error {
 	return c.exec(cStr("ROLLBACK\x00"))
+}
+
+// WithTx is a convenience method that begins a deferred transaction, calls the
+// function f, and will commit the transaction if f does not return an error,
+// and will roll back the transaction if f does return an error.
+func (c *Conn) WithTx(f func() error) error {
+	if err := c.Begin(); err != nil {
+		return fmt.Errorf("failed to begin transaction: %v", err)
+	}
+
+	// Perform work inside the transaction
+	err := f()
+	if err != nil {
+		err2 := c.Rollback()
+		if err2 != nil {
+			return err
+		}
+		return fmt.Errorf("%v, additionally rolling back transaction failed: %v", err, err2)
+	}
+
+	if err = c.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %v", err)
+	}
+	return nil
+}
+
+// WithTxImmediate is a convenience method that begins an immediate
+// transaction, calls the function f, and will commit the transaction if f does
+// not return an error, and will roll back the transaction if f does return an
+// error.
+func (c *Conn) WithTxImmediate(f func() error) error {
+	if err := c.BeginImmediate(); err != nil {
+		return fmt.Errorf("failed to begin immediate transaction: %v", err)
+	}
+
+	// Perform work inside the transaction
+	err := f()
+	if err != nil {
+		err2 := c.Rollback()
+		if err2 != nil {
+			return err
+		}
+		return fmt.Errorf("%v, additionally rolling back transaction failed: %v", err, err2)
+	}
+
+	if err = c.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %v", err)
+	}
+	return nil
+}
+
+// WithTxExclusive is a convenience method that begins a exclusive transaction,
+// calls the function f, and will commit the transaction if f does not return
+// an error, and will roll back the transaction if f does return an error.
+func (c *Conn) WithTxExclusive(f func() error) error {
+	if err := c.BeginExclusive(); err != nil {
+		return fmt.Errorf("failed to begin exclusive transaction: %v", err)
+	}
+
+	// Perform work inside the transaction
+	err := f()
+	if err != nil {
+		err2 := c.Rollback()
+		if err2 != nil {
+			return err
+		}
+		return fmt.Errorf("%v, additionally rolling back transaction failed: %v", err, err2)
+	}
+
+	if err = c.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %v", err)
+	}
+	return nil
 }
 
 // Interrupt causes any pending database operation to abort and return at its

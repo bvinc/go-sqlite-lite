@@ -25,14 +25,14 @@ func main2() error {
 		return fmt.Errorf("failed to create students table: %v", err)
 	}
 
-	err = withTx(conn, func() error {
-		return insertStudents1(conn)
+	err = conn.WithTx(func() error {
+		return insertStudents(conn)
 	})
 	if err != nil {
 		return fmt.Errorf("failed to insert students: %v", err)
 	}
 
-	err = queryStudents1(conn)
+	err = queryStudents(conn)
 	if err != nil {
 		return fmt.Errorf("failed to query students: %v", err)
 	}
@@ -40,26 +40,7 @@ func main2() error {
 	return nil
 }
 
-// withTx performs a function wrapped with a Begin and performs a Rollback if
-// an error occurs, or Commit otherwise
-func withTx(conn *sqlite3.Conn, f func() error) error {
-	if err := conn.Begin(); err != nil {
-		return fmt.Errorf("failed to begin transaction: %v", err)
-	}
-
-	// Perform work inside the transaction
-	err := f()
-	if err != nil {
-		conn.Rollback()
-		return err
-	}
-	if err = conn.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %v", err)
-	}
-	return nil
-}
-
-func insertStudents1(conn *sqlite3.Conn) error {
+func insertStudents(conn *sqlite3.Conn) error {
 	// Create a prepared statement
 	stmt, err := conn.Prepare(`INSERT INTO student VALUES (?, ?)`)
 	if err != nil {
@@ -93,7 +74,7 @@ func insertStudents1(conn *sqlite3.Conn) error {
 	return nil
 }
 
-func queryStudents1(conn *sqlite3.Conn) error {
+func queryStudents(conn *sqlite3.Conn) error {
 	// Prepare can prepare a statement and optionally also bind arguments
 	stmt, err := conn.Prepare(`SELECT * FROM student WHERE age = ?`, 18)
 	if err != nil {

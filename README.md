@@ -119,6 +119,39 @@ for {
 // Remember to Reset the statement if you would like to Bind new arguments and reuse the prepared staement
 ```
 
+### Using Transactions
+```go
+err := conn.Begin()
+if err != nil {
+	...
+}
+
+// Do some work
+...
+
+err := conn.Commit()
+if err != nil {
+	...
+}
+```
+
+### Using Transactions Conveniently
+
+With error handling in Go, it can be pretty inconvenient to ensure that a transaction is rolled back in the case of an error.  The `WithTx` method is provided, which accepts a function of work to do inside of a transaction.  `WithTx` will begin the trasnaction and call the function.  If the function returns an error, the transaction will be rolled back.  If the function succeeds, the transaction will be committed.  `WithTx` can be a little awkward to use, for example:
+
+```go
+err := conn.WithTx(func() error {
+	return insertStudents(conn)
+})
+if err != nil {
+	...
+}
+
+func insertStudents(conn *sqlite3.Conn) error {
+	...
+}
+```
+
 ## Advanced Features
 * Binding parameters to statements using SQLite named parameters.
 * SQLite Blob Incremental IO API.
