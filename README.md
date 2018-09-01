@@ -157,6 +157,8 @@ func insertStudents(conn *sqlite3.Conn) error {
 * Binding parameters to statements using SQLite named parameters.
 * SQLite Blob Incremental IO API.
 * SQLite Online Backup API.
+* Compiled with SQLite support for JSON1, RTREE, FTS5, STAT4, and SOUNDEX.
+* Compiled with SQLite support for OFFSET/LIMIT on UPDATE and DELETE statements.
 * RawString and RawBytes can be used to reduce copying between Go and SQLite.  Please use with caution.
 
 ## Credit
