@@ -511,7 +511,8 @@ func (s *Stmt) DeclTypes() []string {
 
 // Exec is a convenience method that binds the given arguments to the statement
 // then steps the statement to completion and resets the prepared statement. No
-// rows are returned.  Note that bindings are not cleared.
+// rows are returned.  Reset is always called, even in error cases. Note that
+// bindings are not cleared.
 func (s *Stmt) Exec(args ...interface{}) error {
 	err := s.Bind(args...)
 	if err != nil {
@@ -759,7 +760,7 @@ func (s *Stmt) scan(i C.int, v interface{}) error {
 	default:
 		return pkgErr(MISUSE, "unscannable type for column %d (%T)", int(i), v)
 	}
-	// BUG(mxk): If a SQLite memory allocation fails while scanning column
+	// BUG(bvinc): If a SQLite memory allocation fails while scanning column
 	// values, the error is not reported until the next call to Stmt.Next or
 	// Stmt.Close. This behavior may change in the future to check for and
 	// return the error immediately from Stmt.Scan.
@@ -786,6 +787,71 @@ func (s *Stmt) scanDynamic(i C.int, v *interface{}) error {
 		return pkgErr(ERROR, "unknown column type (%d)", typ)
 	}
 	return nil
+}
+
+// ColumnBlob gets the blob value of column i (starting at 0).  This is a high
+// performance interface that is simply a call to sqlite3_column_blob and
+// sqlite3_column_bytes to get the blob and the size.
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnBlob(i int) []byte {
+	return blob(s.stmt, C.int(i), true)
+}
+
+// ColumnDouble gets the double value of column i (starting at 0).  This is a
+// high performance interface that is simply a call to sqlite3_columnb_double.
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnDouble(i int) float64 {
+	return float64(C.sqlite3_column_double(s.stmt, C.int(i)))
+}
+
+// ColumnInt gets the int value of column i (starting at 0).  This is a high
+// performance interface that is simply a call to sqlite3_column_int64.
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnInt(i int) int {
+	return int(C.sqlite3_column_int64(s.stmt, C.int(i)))
+}
+
+// ColumnInt64 gets the int64 value of column i (starting at 0).  This is a
+// high performance interface that is simply a call to sqlite3_column_int64.
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnInt64(i int) int64 {
+	return int64(C.sqlite3_column_int64(s.stmt, C.int(i)))
+}
+
+// ColumnText gets the text value of column i (starting at 0).  This is a high
+// performance interface that is simply a call to sqlite3_column_text and
+// sqlite3_column_bytes to get the text and the size.
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnText(i int) string {
+	return text(s.stmt, C.int(i), true)
+
+}
+
+// ColumnBytes gets the size of a blob or UTF-8 text in column i (starting at
+// 0).
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnBytes(i int) int {
+	return int(C.sqlite3_column_bytes(s.stmt, C.int(i)))
+}
+
+// ColumnRawBytes gets the blob value of column i (starting at 0).  CAUTION:
+// The internal []byte pointer is set to reference memory belonging to SQLite.
+// The memory remains valid until another method is called on the Stmt object
+// and should not be modified.  This is similar to ColumnBlob, except faster
+// and less safe.  Consider using ColumnBlob unless performance is critical.
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnRawBytes(i int) RawBytes {
+	return RawBytes(blob(s.stmt, C.int(i), false))
+}
+
+// ColumnRawString gets the text value of column i (starting at 0).  CAUTION:
+// The internal string pointer is set to reference memory belonging to SQLite.
+// The memory remains valid until another method is called on the Stmt object
+// and should not be modified.  This is similar to ColumnText, except faster
+// and less safe.  Consider using ColumnText unless performance is critical.
+// https://www.sqlite.org/c3ref/column_blob.html
+func (s *Stmt) ColumnRawString(i int) RawString {
+	return RawString(text(s.stmt, C.int(i), false))
 }
 
 // namedArgs checks if args contains named parameter values, and if so, returns
