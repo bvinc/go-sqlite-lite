@@ -138,7 +138,7 @@ if err != nil {
 
 ### Using Transactions Conveniently
 
-With error handling in Go, it can be pretty inconvenient to ensure that a transaction is rolled back in the case of an error.  The `WithTx` method is provided, which accepts a function of work to do inside of a transaction.  `WithTx` will begin the trasnaction and call the function.  If the function returns an error, the transaction will be rolled back.  If the function succeeds, the transaction will be committed.  `WithTx` can be a little awkward to use, for example:
+With error handling in Go, it can be pretty inconvenient to ensure that a transaction is rolled back in the case of an error.  The `WithTx` method is provided, which accepts a function of work to do inside of a transaction.  `WithTx` will begin the transaction and call the function.  If the function returns an error, the transaction will be rolled back.  If the function succeeds, the transaction will be committed.  `WithTx` can be a little awkward to use, for example:
 
 ```go
 err := conn.WithTx(func() error {
@@ -181,7 +181,7 @@ driver.  There are a few places where our philosophies differ.  The crawshaw dri
 
 The crawshaw driver also supports the SQLite session extension, which this driver currently does not.
 
-* **Are finalizers provided to automatically close connections and statements?***
+* **Are finalizers provided to automatically close connections and statements?**
 
 No finalizers are used in this driver.  You are responsible for closing connections and statements.  While I mostly agree with finalizers for cleaning up most accidental resource leaks, in this case, finalizers may fix errors such as locking errors while debugging only to find that the code works unreliably in production.  Removing finalizers makes the behavior consistent.
 
