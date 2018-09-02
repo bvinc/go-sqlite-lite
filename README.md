@@ -138,7 +138,7 @@ if err != nil {
 
 ### Using Transactions Conveniently
 
-With error handling in Go, it can be pretty inconvenient to ensure that a transaction is rolled back in the case of an error.  The `WithTx` method is provided, which accepts a function of work to do inside of a transaction.  `WithTx` will begin the transaction and call the function.  If the function returns an error, the transaction will be rolled back.  If the function succeeds, the transaction will be committed.  `WithTx` can be a little awkward to use, for example:
+With error handling in Go, it can be pretty inconvenient to ensure that a transaction is rolled back in the case of an error.  The `WithTx` method is provided, which accepts a function of work to do inside of a transaction.  `WithTx` will begin the transaction and call the function.  If the function returns an error, the transaction will be rolled back.  If the function succeeds, the transaction will be committed.  `WithTx` can be a little awkward to use, but it's necessary.  For example:
 
 ```go
 err := conn.WithTx(func() error {
