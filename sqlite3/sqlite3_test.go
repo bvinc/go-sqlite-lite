@@ -884,3 +884,19 @@ func TestSchema(T *testing.T) {
 	}
 	t.step(s, false)
 }
+
+func TestUpdateDeleteLimit(T *testing.T) {
+	t := begin(T)
+
+	c1, c2 := t.open(":memory:"), t.open(":memory:")
+	defer t.close(c1)
+	defer t.close(c2)
+	t.exec(c1, "CREATE TABLE x(a INTEGER PRIMARY KEY)")
+	t.exec(c1, "INSERT INTO x VALUES(?)", 1)
+	t.exec(c1, "INSERT INTO x VALUES(?)", 2)
+	t.exec(c1, "INSERT INTO x VALUES(?)", 3)
+	t.exec(c1, "INSERT INTO x VALUES(?)", 4)
+	t.exec(c1, "INSERT INTO x VALUES(?)", 5)
+	t.exec(c1, "UPDATE x SET a = a + 10 WHERE a >= 1 ORDER BY a LIMIT 2 OFFSET 1")
+	t.exec(c1, "DELETE FROM x WHERE a >= 10 ORDER BY a LIMIT 1 OFFSET 1")
+}
