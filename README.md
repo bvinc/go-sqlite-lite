@@ -8,7 +8,7 @@
 go-sqlite-lite is a SQLite driver for the Go programming language.  It is designed with the following goals in mind.
 
 * **Lightweight** - Most methods should be little more than a small wrapper around SQLite C functions.
-* **Performance** - Where possible, methods should be available to allow for the highest peformance possible.
+* **Performance** - Where possible, methods should be available to allow for the highest performance possible.
 * **Understandable** - You should always know what SQLite functions are being called and in what order.
 * **Unsurprising** - Connections, PRAGMAs, transactions, bindings, and stepping should work out of the box exactly as you would expect with SQLite.
 * **Debuggable** - When you encounter a SQLite error, the SQLite documentation should be relevant and relatable to the Go code.
