@@ -698,6 +698,8 @@ func (s *Stmt) Scan(dst ...interface{}) error {
 // until the next call to Exec or Query.
 // https://www.sqlite.org/c3ref/reset.html
 func (s *Stmt) Reset() error {
+	s.colTypes = s.colTypes[:0]
+	s.haveColTypes = false
 	if rc := C.sqlite3_reset(s.stmt); rc != OK {
 		return errStr(rc)
 	}
