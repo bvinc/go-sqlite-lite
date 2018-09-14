@@ -929,7 +929,7 @@ func (s *Stmt) ColumnBlob(i int) (val []byte, err error) {
 }
 
 // ColumnDouble gets the double value of column i (starting at 0).  If the
-// value is NULL, then ok is set to false.
+// value is NULL, then val is set to 0.0 and ok is set to false.
 // https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnDouble(i int) (val float64, ok bool, err error) {
 	s.assureColTypes()
@@ -945,7 +945,7 @@ func (s *Stmt) ColumnDouble(i int) (val float64, ok bool, err error) {
 }
 
 // ColumnInt gets the int value of column i (starting at 0).  If the value is
-// NULL, then ok is set to false.
+// NULL, then val is set to 0 and ok is set to false.
 // https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnInt(i int) (val int, ok bool, err error) {
 	s.assureColTypes()
@@ -961,7 +961,7 @@ func (s *Stmt) ColumnInt(i int) (val int, ok bool, err error) {
 }
 
 // ColumnInt64 gets the int64 value of column i (starting at 0).  If the
-// value is NULL, then k is set to false.
+// value is NULL, then val is set to 0 and ok is set to false.
 // https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnInt64(i int) (val int64, ok bool, err error) {
 	s.assureColTypes()
@@ -977,7 +977,7 @@ func (s *Stmt) ColumnInt64(i int) (val int64, ok bool, err error) {
 }
 
 // ColumnText gets the text value of column i (starting at 0).  If the value is
-// NULL, then col is set to "" and ok is set to false.
+// NULL, then val is set to "" and ok is set to false.
 // https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnText(i int) (val string, ok bool, err error) {
 	s.assureColTypes()
