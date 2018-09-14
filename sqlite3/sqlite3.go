@@ -96,6 +96,10 @@ import (
 // initErr indicates a SQLite initialization error, which disables this package.
 var initErr error
 
+// emptyByteSlice is what we might return on ColumnRawBytes to avoid
+// allocation.  Since they are not allowed to modify the slice, this is safe.
+var emptyByteSlice = []byte{}
+
 func init() {
 	// Initialize SQLite (required with SQLITE_OMIT_AUTOINIT).
 	// https://www.sqlite.org/c3ref/initialize.html
@@ -203,7 +207,7 @@ func (c *Conn) Prepare(sql string, args ...interface{}) (s *Stmt, err error) {
 		}
 	}
 
-	s = &Stmt{stmt: stmt, Tail: tail}
+	s = &Stmt{stmt: stmt, db: c.db, Tail: tail}
 
 	if len(args) > 0 {
 		if err = s.Bind(args...); err != nil {
@@ -477,8 +481,16 @@ func (c *Conn) exec(sql *C.char) error {
 // Stmt is a prepared statement handle.
 // https://www.sqlite.org/c3ref/stmt.html
 type Stmt struct {
-	stmt *C.sqlite3_stmt
 	Tail string
+
+	stmt *C.sqlite3_stmt
+	db   *C.sqlite3
+	// Data type codes for all columns in the current row.  This is
+	// unfortunately absolutely necessary to keep around.  Column types are
+	// required in order to differentiate NULL from error conditions, and
+	// sqlite3_column_type is undefined after a type conversion happens.
+	colTypes     []uint8
+	haveColTypes bool
 }
 
 // Close releases all resources associated with the prepared statement. This
@@ -630,7 +642,12 @@ func (s *Stmt) Bind(args ...interface{}) error {
 		case string:
 			rc = C.bind_text(s.stmt, C.int(i+1), cStr(v), C.int(len(v)), 1)
 		case []byte:
-			rc = C.bind_blob(s.stmt, C.int(i+1), cBytes(v), C.int(len(v)), 1)
+			// This is a strange case.  nil byte arrays should be treated as inserting NULL
+			if []byte(v) == nil {
+				rc = C.sqlite3_bind_null(s.stmt, C.int(i+1))
+			} else {
+				rc = C.bind_blob(s.stmt, C.int(i+1), cBytes(v), C.int(len(v)), 1)
+			}
 		case time.Time:
 			rc = C.sqlite3_bind_int64(s.stmt, C.int(i+1), C.sqlite3_int64(v.Unix()))
 		case RawString:
@@ -667,7 +684,7 @@ func (s *Stmt) Scan(dst ...interface{}) error {
 
 	for i, v := range dst[:n] {
 		if v != nil {
-			if err := s.scan(C.int(i), v); err != nil {
+			if err := s.scan(i, v); err != nil {
 				return err
 			}
 		}
@@ -735,7 +752,12 @@ func (s *Stmt) bindNamed(args NamedArgs) error {
 		case string:
 			rc = C.bind_text(s.stmt, i, cStr(v), C.int(len(v)), 1)
 		case []byte:
-			rc = C.bind_blob(s.stmt, i, cBytes(v), C.int(len(v)), 1)
+			// This is a strange case.  nil byte arrays should be treated as inserting NULL
+			if []byte(v) == nil {
+				rc = C.sqlite3_bind_null(s.stmt, i)
+			} else {
+				rc = C.bind_blob(s.stmt, i, cBytes(v), C.int(len(v)), 1)
+			}
 		case time.Time:
 			rc = C.sqlite3_bind_int64(s.stmt, i, C.sqlite3_int64(v.Unix()))
 		case RawString:
@@ -758,11 +780,14 @@ func (s *Stmt) bindNamed(args NamedArgs) error {
 // if a new row of data is ready for processing.
 // https://www.sqlite.org/c3ref/step.html
 func (s *Stmt) Step() (bool, error) {
+	s.colTypes = s.colTypes[:0]
+	s.haveColTypes = false
 	rc := C.sqlite3_step(s.stmt)
+	if rc == ROW {
+		return true, nil
+	}
 	if rc == DONE {
 		return false, nil
-	} else if rc == ROW {
-		return true, nil
 	}
 	return false, errStr(rc)
 }
@@ -784,128 +809,210 @@ func (s *Stmt) StepToCompletion() error {
 	return nil
 }
 
+// assureColTypes asks SQLite for column types for the current row if we don't
+// currently have them.  We must cache the column types since they're important
+// for error detection and their values are undefined after type conversions.
+func (s *Stmt) assureColTypes() {
+	if !s.haveColTypes {
+		n := s.ColumnCount()
+		if cap(s.colTypes) < n {
+			s.colTypes = make([]uint8, n)
+		} else {
+			s.colTypes = s.colTypes[:n]
+		}
+		C.column_types(s.stmt, (*C.uchar)(cBytes(s.colTypes)), C.int(n))
+		s.haveColTypes = true
+	}
+}
+
 // ColumnType returns the data type code of column i in the current row (one of
-// INTEGER, FLOAT, TEXT, BLOB, or NULL). The value becomes undefined after a
-// type conversion.
+// INTEGER, FLOAT, TEXT, BLOB, or NULL). Unlike SQLite, these values are still
+// defined even after type conversion.
 // https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnType(i int) byte {
-	return byte(C.sqlite3_column_type(s.stmt, C.int(i)))
+	s.assureColTypes()
+	return s.colTypes[i]
 }
 
 // ColumnTypes returns the data type codes of columns in the current row.
 // Possible data types are INTEGER, FLOAT, TEXT, BLOB, and NULL. These
-// represent the actual storage classes used by SQLite to store each value
-// before any conversion.
+// represent the actual storage classes used by SQLite to store each value.
+// Unlike SQLite, these values are still defined after type conversion.
 // https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnTypes() []byte {
-	n := s.ColumnCount()
-	colTypes := make([]byte, n)
-	if n != 0 {
-		C.column_types(s.stmt, (*C.uchar)(cBytes(colTypes)), C.int(n))
-	}
-	return colTypes
+	s.assureColTypes()
+	return s.colTypes
 }
 
 // scan scans the value of column i (starting at 0) into v.
-func (s *Stmt) scan(i C.int, v interface{}) error {
+func (s *Stmt) scan(i int, v interface{}) error {
+	var err error
 	switch v := v.(type) {
 	case *interface{}:
 		return s.scanDynamic(i, v)
 	case *int:
-		*v = int(C.sqlite3_column_int64(s.stmt, i))
+		*v, _, err = s.ColumnInt(i)
 	case *int64:
-		*v = int64(C.sqlite3_column_int64(s.stmt, i))
+		*v, _, err = s.ColumnInt64(i)
 	case *float64:
-		*v = float64(C.sqlite3_column_double(s.stmt, i))
+		*v, _, err = s.ColumnDouble(i)
 	case *bool:
-		*v = C.sqlite3_column_int64(s.stmt, i) != 0
+		var b int64
+		b, _, err = s.ColumnInt64(i)
+		*v = b != 0
 	case *string:
-		*v = text(s.stmt, i, true)
+		*v, _, err = s.ColumnText(i)
 	case *[]byte:
-		*v = blob(s.stmt, i, true)
+		*v, err = s.ColumnBlob(i)
 	case *RawString:
-		*v = RawString(text(s.stmt, i, false))
+		*v, _, err = s.ColumnRawString(i)
 	case *RawBytes:
-		*v = RawBytes(blob(s.stmt, i, false))
+		*v, err = s.ColumnRawBytes(i)
 	case io.Writer:
-		if _, err := v.Write(blob(s.stmt, i, false)); err != nil {
-			return err
-		}
+		_, err = v.Write(blob(s.stmt, C.int(i), false))
 	default:
 		return pkgErr(MISUSE, "unscannable type for column %d (%T)", int(i), v)
 	}
-	// BUG(bvinc): If a SQLite memory allocation fails while scanning column
-	// values, the error is not reported until the next call to Stmt.Next or
-	// Stmt.Close. This behavior may change in the future to check for and
-	// return the error immediately from Stmt.Scan.
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 // scanDynamic scans the value of column i (starting at 0) into v, using the
 // column's data type and declaration to select an appropriate representation.
-func (s *Stmt) scanDynamic(i C.int, v *interface{}) error {
+func (s *Stmt) scanDynamic(i int, v *interface{}) error {
+	var err error
 	switch typ := s.ColumnType(int(i)); typ {
 	case INTEGER:
-		n := int64(C.sqlite3_column_int64(s.stmt, i))
-		*v = n
+		*v, _, err = s.ColumnInt64(i)
 	case FLOAT:
-		*v = float64(C.sqlite3_column_double(s.stmt, i))
+		*v, _, err = s.ColumnDouble(i)
 	case TEXT:
-		*v = text(s.stmt, i, true)
+		*v, _, err = s.ColumnText(i)
 	case BLOB:
-		*v = blob(s.stmt, i, true)
+		*v, err = s.ColumnBlob(i)
 	case NULL:
 		*v = nil
 	default:
 		*v = nil
 		return pkgErr(ERROR, "unknown column type (%d)", typ)
 	}
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
-// ColumnBlob gets the blob value of column i (starting at 0).  This is a high
-// performance interface that is simply a call to sqlite3_column_blob and
-// sqlite3_column_bytes to get the blob and the size.
+// ColumnBlob gets the blob value of column i (starting at 0).  If the blob
+// is NULL, then nil is returned.
 // https://www.sqlite.org/c3ref/column_blob.html
-func (s *Stmt) ColumnBlob(i int) []byte {
-	return blob(s.stmt, C.int(i), true)
+func (s *Stmt) ColumnBlob(i int) (val []byte, err error) {
+	s.assureColTypes()
+	if s.colTypes[i] == NULL {
+		return nil, nil
+	}
+
+	n := C.sqlite3_column_bytes(s.stmt, C.int(i))
+	if n == 0 {
+		return []byte{}, nil
+	}
+
+	p := C.sqlite3_column_blob(s.stmt, C.int(i))
+	if p == nil {
+		rc := C.sqlite3_errcode(s.db)
+		return nil, errMsg(rc, s.db)
+	}
+
+	// Copy the blob
+	return C.GoBytes(p, n), nil
 }
 
-// ColumnDouble gets the double value of column i (starting at 0).  This is a
-// high performance interface that is simply a call to sqlite3_columnb_double.
+// ColumnDouble gets the double value of column i (starting at 0).  If the
+// value is NULL, then ok is set to false.
 // https://www.sqlite.org/c3ref/column_blob.html
-func (s *Stmt) ColumnDouble(i int) float64 {
-	return float64(C.sqlite3_column_double(s.stmt, C.int(i)))
+func (s *Stmt) ColumnDouble(i int) (val float64, ok bool, err error) {
+	s.assureColTypes()
+	if i >= len(s.colTypes) {
+		return 0.0, false, errStr(RANGE)
+	}
+	if s.colTypes[i] == NULL {
+		return 0.0, false, nil
+	}
+
+	val = float64(C.sqlite3_column_double(s.stmt, C.int(i)))
+	return val, true, nil
 }
 
-// ColumnInt gets the int value of column i (starting at 0).  This is a high
-// performance interface that is simply a call to sqlite3_column_int64.
+// ColumnInt gets the int value of column i (starting at 0).  If the value is
+// NULL, then ok is set to false.
 // https://www.sqlite.org/c3ref/column_blob.html
-func (s *Stmt) ColumnInt(i int) int {
-	return int(C.sqlite3_column_int64(s.stmt, C.int(i)))
+func (s *Stmt) ColumnInt(i int) (val int, ok bool, err error) {
+	s.assureColTypes()
+	if i >= len(s.colTypes) {
+		return 0, false, errStr(RANGE)
+	}
+	if s.colTypes[i] == NULL {
+		return 0, false, nil
+	}
+
+	val = int(C.sqlite3_column_int64(s.stmt, C.int(i)))
+	return val, true, nil
 }
 
-// ColumnInt64 gets the int64 value of column i (starting at 0).  This is a
-// high performance interface that is simply a call to sqlite3_column_int64.
+// ColumnInt64 gets the int64 value of column i (starting at 0).  If the
+// value is NULL, then k is set to false.
 // https://www.sqlite.org/c3ref/column_blob.html
-func (s *Stmt) ColumnInt64(i int) int64 {
-	return int64(C.sqlite3_column_int64(s.stmt, C.int(i)))
+func (s *Stmt) ColumnInt64(i int) (val int64, ok bool, err error) {
+	s.assureColTypes()
+	if i >= len(s.colTypes) {
+		return 0, false, errStr(RANGE)
+	}
+	if s.colTypes[i] == NULL {
+		return 0, false, nil
+	}
+
+	val = int64(C.sqlite3_column_int64(s.stmt, C.int(i)))
+	return val, true, nil
 }
 
-// ColumnText gets the text value of column i (starting at 0).  This is a high
-// performance interface that is simply a call to sqlite3_column_text and
-// sqlite3_column_bytes to get the text and the size.
+// ColumnText gets the text value of column i (starting at 0).  If the value is
+// NULL, then col is set to "" and ok is set to false.
 // https://www.sqlite.org/c3ref/column_blob.html
-func (s *Stmt) ColumnText(i int) string {
-	return text(s.stmt, C.int(i), true)
+func (s *Stmt) ColumnText(i int) (val string, ok bool, err error) {
+	s.assureColTypes()
+	if i >= len(s.colTypes) {
+		return "", false, errStr(RANGE)
+	}
+	if s.colTypes[i] == NULL {
+		return "", false, nil
+	}
 
+	n := C.sqlite3_column_bytes(s.stmt, C.int(i))
+	if n == 0 {
+		return "", true, nil
+	}
+
+	p := (*C.char)(unsafe.Pointer(C.sqlite3_column_text(s.stmt, C.int(i))))
+	if p == nil {
+		rc := C.sqlite3_errcode(s.db)
+		return "", false, errMsg(rc, s.db)
+	}
+
+	// Copy the string
+	return C.GoStringN(p, n), true, nil
 }
 
 // ColumnBytes gets the size of a blob or UTF-8 text in column i (starting at
 // 0).
 // https://www.sqlite.org/c3ref/column_blob.html
-func (s *Stmt) ColumnBytes(i int) int {
-	return int(C.sqlite3_column_bytes(s.stmt, C.int(i)))
+func (s *Stmt) ColumnBytes(i int) (int, error) {
+	s.assureColTypes()
+	if i >= len(s.colTypes) {
+		return 0, errStr(RANGE)
+	}
+
+	return int(C.sqlite3_column_bytes(s.stmt, C.int(i))), nil
 }
 
 // ColumnRawBytes gets the blob value of column i (starting at 0).  CAUTION:
@@ -914,8 +1021,28 @@ func (s *Stmt) ColumnBytes(i int) int {
 // and should not be modified.  This is similar to ColumnBlob, except faster
 // and less safe.  Consider using ColumnBlob unless performance is critical.
 // https://www.sqlite.org/c3ref/column_blob.html
-func (s *Stmt) ColumnRawBytes(i int) RawBytes {
-	return RawBytes(blob(s.stmt, C.int(i), false))
+func (s *Stmt) ColumnRawBytes(i int) (val RawBytes, err error) {
+	s.assureColTypes()
+	if i >= len(s.colTypes) {
+		return nil, errStr(RANGE)
+	}
+	if s.colTypes[i] == NULL {
+		return nil, nil
+	}
+
+	n := C.sqlite3_column_bytes(s.stmt, C.int(i))
+	if n == 0 {
+		return emptyByteSlice, nil
+	}
+
+	p := C.sqlite3_column_blob(s.stmt, C.int(i))
+	if p == nil {
+		rc := C.sqlite3_errcode(s.db)
+		return nil, errMsg(rc, s.db)
+	}
+
+	// Don't copy the blob
+	return goBytes(p, n), nil
 }
 
 // ColumnRawString gets the text value of column i (starting at 0).  CAUTION:
@@ -924,8 +1051,28 @@ func (s *Stmt) ColumnRawBytes(i int) RawBytes {
 // and should not be modified.  This is similar to ColumnText, except faster
 // and less safe.  Consider using ColumnText unless performance is critical.
 // https://www.sqlite.org/c3ref/column_blob.html
-func (s *Stmt) ColumnRawString(i int) RawString {
-	return RawString(text(s.stmt, C.int(i), false))
+func (s *Stmt) ColumnRawString(i int) (val RawString, ok bool, err error) {
+	s.assureColTypes()
+	if i >= len(s.colTypes) {
+		return "", false, errStr(RANGE)
+	}
+	if s.colTypes[i] == NULL {
+		return "", false, nil
+	}
+
+	n := C.sqlite3_column_bytes(s.stmt, C.int(i))
+	if n == 0 {
+		return "", true, nil
+	}
+
+	p := (*C.char)(unsafe.Pointer(C.sqlite3_column_text(s.stmt, C.int(i))))
+	if p == nil {
+		rc := C.sqlite3_errcode(s.db)
+		return "", false, errMsg(rc, s.db)
+	}
+
+	// Don't copy the string
+	return RawString(goStrN(p, n)), true, nil
 }
 
 // namedArgs checks if args contains named parameter values, and if so, returns

@@ -334,10 +334,12 @@ func TestScan(T *testing.T) {
 
 	// ''
 	want.v = ""
+	want.bytes = []byte{}
+	want.RawBytes = []byte{}
 	scanNext(s, have, want)
 
 	// x''
-	want.v = []byte(nil)
+	want.v = []byte{}
 	scanNext(s, have, want)
 
 	// 0
@@ -454,7 +456,7 @@ func TestScanDynamic(T *testing.T) {
 	scanNext(s, have, want)
 
 	// x''
-	want = &row{[]byte(nil), []byte(nil), []byte(nil), []byte(nil)}
+	want = &row{[]byte{}, []byte{}, []byte{}, []byte{}}
 	scanNext(s, have, want)
 
 	// 0
@@ -570,23 +572,13 @@ func TestParams(T *testing.T) {
 	verify(int64(0), int64(1), "", "x\x00y")
 
 	t.exec(s, []byte(nil), []byte{}, []byte{0}, []byte("1"))
-	verify([]byte(nil), []byte(nil), []byte{0}, []byte("1"))
+	verify(nil, []byte{}, []byte{0}, []byte("1"))
 
 	t.exec(s, time.Unix(0, 0), time.Unix(1, 0), RawString(""), RawString("x"))
 	verify(int64(0), int64(1), "", "x")
 
 	t.exec(s, RawBytes(""), RawBytes("x"), ZeroBlob(0), ZeroBlob(2))
-	verify([]byte(nil), []byte("x"), []byte(nil), []byte{0, 0})
-
-	// Issue 1: string/[]byte zero values are not NULLs
-	var s1, s2 string
-	var b1, b2 []byte
-	*sHdr(s1) = reflect.StringHeader{}
-	*sHdr(s2) = reflect.StringHeader{Data: 1}
-	*bHdr(b1) = reflect.SliceHeader{}
-	*bHdr(b2) = reflect.SliceHeader{Data: 1}
-	t.exec(s, s1, s2, b1, b2)
-	verify("", "", []byte(nil), []byte(nil))
+	verify([]byte{}, []byte("x"), []byte{}, []byte{0, 0})
 
 	// Named
 	s = t.prepare(c, "INSERT INTO x VALUES(:a, @B, :a, $d)")
@@ -888,15 +880,76 @@ func TestSchema(T *testing.T) {
 func TestUpdateDeleteLimit(T *testing.T) {
 	t := begin(T)
 
-	c1, c2 := t.open(":memory:"), t.open(":memory:")
-	defer t.close(c1)
-	defer t.close(c2)
-	t.exec(c1, "CREATE TABLE x(a INTEGER PRIMARY KEY)")
-	t.exec(c1, "INSERT INTO x VALUES(?)", 1)
-	t.exec(c1, "INSERT INTO x VALUES(?)", 2)
-	t.exec(c1, "INSERT INTO x VALUES(?)", 3)
-	t.exec(c1, "INSERT INTO x VALUES(?)", 4)
-	t.exec(c1, "INSERT INTO x VALUES(?)", 5)
-	t.exec(c1, "UPDATE x SET a = a + 10 WHERE a >= 1 ORDER BY a LIMIT 2 OFFSET 1")
-	t.exec(c1, "DELETE FROM x WHERE a >= 10 ORDER BY a LIMIT 1 OFFSET 1")
+	c := t.open(":memory:")
+	defer t.close(c)
+	t.exec(c, "CREATE TABLE x(a INTEGER PRIMARY KEY)")
+	t.exec(c, "INSERT INTO x VALUES(?)", 1)
+	t.exec(c, "INSERT INTO x VALUES(?)", 2)
+	t.exec(c, "INSERT INTO x VALUES(?)", 3)
+	t.exec(c, "INSERT INTO x VALUES(?)", 4)
+	t.exec(c, "INSERT INTO x VALUES(?)", 5)
+	t.exec(c, "UPDATE x SET a = a + 10 WHERE a >= 1 ORDER BY a LIMIT 2 OFFSET 1")
+	t.exec(c, "DELETE FROM x WHERE a >= 10 ORDER BY a LIMIT 1 OFFSET 1")
+}
+
+func TestStringNull(T *testing.T) {
+	t := begin(T)
+
+	c := t.open(":memory:")
+	defer t.close(c)
+	t.exec(c, "CREATE TABLE x(a TEXT)")
+	t.exec(c, "INSERT INTO x VALUES(?)", nil)
+	s := t.prepare(c, "SELECT * from x")
+	defer s.Close()
+
+	t.step(s, true)
+	x := "overwriteme"
+	s.Scan(&x)
+	if x != "" {
+		t.Fatal("Expected empty string")
+	}
+	x2, ok, err := s.ColumnText(0)
+	if x2 != "" {
+		t.Fatal("Expected empty string")
+	}
+	if ok != false {
+		t.Fatal("Expected ok==false")
+	}
+	if err != nil {
+		t.Fatal("Expected err==nil")
+	}
+}
+
+func TestStringNullByteSlice(T *testing.T) {
+	t := begin(T)
+
+	c := t.open(":memory:")
+	defer t.close(c)
+	t.exec(c, "CREATE TABLE x(a TEXT)")
+	t.exec(c, "INSERT INTO x VALUES(?)", nil)
+	s := t.prepare(c, "SELECT * from x")
+	defer s.Close()
+
+	t.step(s, true)
+	var x []byte
+	s.Scan(&x)
+	if x != nil {
+		t.Fatal("Expected nil byte slice")
+	}
+	x2, err := s.ColumnBlob(0)
+	if x2 != nil {
+		t.Fatal("Expected nil byte slice")
+	}
+	if err != nil {
+		t.Fatal("Expected err==nil")
+	}
+}
+
+func TestRawStringNull(T *testing.T) {
+	t := begin(T)
+
+	c := t.open(":memory:")
+	defer t.close(c)
+	t.exec(c, "CREATE TABLE x(a TEXT)")
+	t.exec(c, "INSERT INTO x VALUES(?)", nil)
 }
