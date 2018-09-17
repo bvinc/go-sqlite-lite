@@ -18,11 +18,11 @@ Most database drivers include a layer to work nicely with the Go `database/sql` 
 
 ## Releases
 
-* 2018-09-16 v0.3.0 - SQLite version 3.25.0
-* 2018-09-14 v0.2.0 - Proper error and NULL handling on Column* methods.  Empty blobs and empty strings are now distinct from NULL in all cases.  A nil byte slice is interpreted as NULL for binding purposes as well as Column* methods.
-* 2018-09-01 v0.1.2 - Added Column methods to Stmt, and WithTx methods to Conn
-* 2018-08-25 v0.1.1 - Fixed linking on some Linux systems
-* 2018-08-21 v0.1.0 - SQLite version 3.24.0
+* 2018-09-16 **v0.3.0** - SQLite version 3.25.0
+* 2018-09-14 **v0.2.0** - Proper error and NULL handling on Column* methods.  Empty blobs and empty strings are now distinct from NULL in all cases.  A nil byte slice is interpreted as NULL for binding purposes as well as Column* methods.
+* 2018-09-01 **v0.1.2** - Added Column methods to Stmt, and WithTx methods to Conn
+* 2018-08-25 **v0.1.1** - Fixed linking on some Linux systems
+* 2018-08-21 **v0.1.0** - SQLite version 3.24.0
 
 ## Getting started
 
