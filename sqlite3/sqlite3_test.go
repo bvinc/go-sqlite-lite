@@ -1045,24 +1045,17 @@ func TestBusyHandler(T *testing.T) {
 	defer t.close(c2)
 	t.exec(c1, "CREATE TABLE x(a); BEGIN; INSERT INTO x VALUES(1);")
 
-	try := func(sql string, want, terr time.Duration) {
-		start := time.Now()
+	try := func(sql string) {
 		err := c2.Exec(sql)
-		have := time.Since(start)
-		if have < want-terr || want+terr < have {
-			t.Fatalf(cl("c2.Exec(%q) timeout expected %v; got %v"), sql, want, have)
-		}
 		t.errCode(err, BUSY)
 	}
-	want := 100 * time.Millisecond
-	terr := 50 * time.Millisecond
 
 	// Default
-	try("INSERT INTO x VALUES(2)", 0, terr/2)
+	try("INSERT INTO x VALUES(2)")
 
 	// Built-in
-	c2.BusyTimeout(want)
-	try("INSERT INTO x VALUES(3)", want, terr)
+	c2.BusyTimeout(100 * time.Millisecond)
+	try("INSERT INTO x VALUES(3)")
 
 	// Custom
 	calls := 0
@@ -1072,14 +1065,14 @@ func TestBusyHandler(T *testing.T) {
 		return calls == count+1 && calls < 10
 	}
 	c2.BusyFunc(handler)
-	try("INSERT INTO x VALUES(4)", want, terr)
+	try("INSERT INTO x VALUES(4)")
 	if calls != 10 {
 		t.Fatalf("calls expected 10; got %d", calls)
 	}
 
 	// Disable
 	c2.BusyTimeout(0)
-	try("INSERT INTO x VALUES(5)", 0, terr/2)
+	try("INSERT INTO x VALUES(5)")
 }
 
 func TestLocked(T *testing.T) {
