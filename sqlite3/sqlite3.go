@@ -976,6 +976,8 @@ func (s *Stmt) Step() (bool, error) {
 // more rows are returned or an error occurs.
 // https://www.sqlite.org/c3ref/step.html
 func (s *Stmt) StepToCompletion() error {
+	s.colTypes = s.colTypes[:0]
+	s.haveColTypes = false
 	for {
 		rc := C.sqlite3_blocking_step(s.db, s.stmt)
 		if rc == ROW {
