@@ -160,6 +160,9 @@ func insertStudents(conn *sqlite3.Conn) error {
 * Binding parameters to statements using SQLite named parameters.
 * SQLite Blob Incremental IO API.
 * SQLite Online Backup API.
+* Supports setting a custom busy handler
+* Supports callback hooks on commit, rollback, and update.
+* If shared cache mode is enabled and one statement receives a `SQLITE_LOCKED` error, the SQLITE [unlock_notify](https://sqlite.org/unlock_notify.html) extension is used to transparently block and try again when the conflicting statement finishes.
 * Compiled with SQLite support for JSON1, RTREE, FTS5, STAT4, and SOUNDEX.
 * Compiled with SQLite support for OFFSET/LIMIT on UPDATE and DELETE statements.
 * RawString and RawBytes can be used to reduce copying between Go and SQLite.  Please use with caution.
@@ -180,7 +183,7 @@ This driver was forked from `mxk/go-sqlite-driver`.  It hadn't been maintained i
 * **What are the differences betwen this driver and the crawshaw/sqlite driver?**
 
 The crawshaw driver is pretty well thought out and solves a lot of the same problems as this
-driver.  There are a few places where our philosophies differ.  The crawshaw driver defaults (when flags of 0 are given) to SQLite shared cache mode and WAL mode.  The SQLite unlock_notify API is used to prevent locking errors with shared cache mode.  The default WAL synchronous mode is changed.  Prepared statements are transparently cached.  Connection pools are provided.  I would be opposed to making most of these changes to this driver.  I would like this driver to provide a default, light, and unsurprising SQLite experience.
+driver.  There are a few places where our philosophies differ.  The crawshaw driver defaults (when flags of 0 are given) to SQLite shared cache mode and WAL mode.  The default WAL synchronous mode is changed.  Prepared statements are transparently cached.  Connection pools are provided.  I would be opposed to making most of these changes to this driver.  I would like this driver to provide a default, light, and unsurprising SQLite experience.
 
 The crawshaw driver also supports the SQLite session extension, which this driver currently does not.
 
