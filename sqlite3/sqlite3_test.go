@@ -574,7 +574,7 @@ func TestParams(T *testing.T) {
 	t.exec(s, []byte(nil), []byte{}, []byte{0}, []byte("1"))
 	verify(nil, []byte{}, []byte{0}, []byte("1"))
 
-	t.exec(s, time.Unix(0, 0), time.Unix(1, 0), RawString(""), RawString("x"))
+	t.exec(s, int64(0), int64(1), RawString(""), RawString("x"))
 	verify(int64(0), int64(1), "", "x")
 
 	t.exec(s, RawBytes(""), RawBytes("x"), ZeroBlob(0), ZeroBlob(2))
