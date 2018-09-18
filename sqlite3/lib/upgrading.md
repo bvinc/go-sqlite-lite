@@ -10,5 +10,5 @@ unzip sqlite-src-XXXXXXX.zip
 cd sqlite-src-XXXXXXX
 CFLAGS='-DSQLITE_ENABLE_UPDATE_DELETE_LIMIT=1' ./configure
 make sqlite3.c
-cp sqlite3.c ~/go/src/github.com/bvinc/go-sqlite-lite/sqlite3/lib/sqlite3.c
+cp sqlite3.c sqlite3.h ~/go/src/github.com/bvinc/go-sqlite-lite/sqlite3/lib/
 ```
