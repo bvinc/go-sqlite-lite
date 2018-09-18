@@ -1081,3 +1081,31 @@ func TestBusyHandler(T *testing.T) {
 	c2.BusyTimeout(0)
 	try("INSERT INTO x VALUES(5)", 0, terr/2)
 }
+
+func TestLocked(T *testing.T) {
+	t := begin(T)
+	defer t.skipRestIfFailed()
+
+	c := t.open(":memory:")
+	defer t.close(c)
+	t.exec(c, "CREATE TABLE x(a)")
+
+	// Allow
+	c.Begin()
+	t.exec(c, "INSERT INTO x VALUES(1)")
+	t.exec(c, "INSERT INTO x VALUES(2)")
+	if err := c.Commit(); err != nil {
+		t.Fatalf("c.Commit() unexpected error: %v", err)
+	}
+
+	s := t.prepare(c, "SELECT * FROM x ORDER BY rowid")
+	defer t.close(s)
+	t.step(s, true)
+
+	s2 := t.prepare(c, "DROP TABLE x")
+	defer s2.Close()
+	_, err := s2.Step()
+	if err == nil {
+		t.Fatalf("expected SQLITE_LOCKED")
+	}
+}
