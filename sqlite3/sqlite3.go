@@ -78,9 +78,20 @@ static void column_types(sqlite3_stmt *s, unsigned char p[], int n) {
 
 // Macro for creating callback setter functions.
 #define SET(x) \
-static void set_##x(sqlite3 *db, void *conn, int enable) { \
-	(enable ? sqlite3_##x(db, go_##x, conn) : sqlite3_##x(db, 0, 0)); \
+static void set_##x(sqlite3 *db, void *data, int enable) { \
+	(enable ? sqlite3_##x(db, go_##x, data) : sqlite3_##x(db, 0, 0)); \
 }
+
+// util.go exports.
+int go_busy_handler(void*,int);
+int go_commit_hook(void*);
+void go_rollback_hook(void*);
+void go_update_hook(void* data, int op,const char *db, const char *tbl, sqlite3_int64 row);
+
+SET(busy_handler)
+SET(commit_hook)
+SET(rollback_hook)
+SET(update_hook)
 
 */
 import "C"
@@ -99,6 +110,11 @@ var initErr error
 // emptyByteSlice is what we might return on ColumnRawBytes to avoid
 // allocation.  Since they are not allowed to modify the slice, this is safe.
 var emptyByteSlice = []byte{}
+
+var busyRegistry = newRegistry()
+var commitRegistry = newRegistry()
+var rollbackRegistry = newRegistry()
+var updateRegistry = newRegistry()
 
 func init() {
 	// Initialize SQLite (required with SQLITE_OMIT_AUTOINIT).
@@ -119,6 +135,11 @@ func init() {
 // https://www.sqlite.org/c3ref/sqlite3.html
 type Conn struct {
 	db *C.sqlite3
+
+	busyIdx     int
+	commitIdx   int
+	rollbackIdx int
+	updateIdx   int
 }
 
 // Open creates a new connection to a SQLite database. The name can be 1) a path
@@ -167,6 +188,21 @@ func Open(name string, flagArgs ...int) (*Conn, error) {
 func (c *Conn) Close() error {
 	if db := c.db; db != nil {
 		c.db = nil
+
+		// Unregister all of the globally registered callbacks
+		if c.busyIdx != 0 {
+			busyRegistry.unregister(c.busyIdx)
+		}
+		if c.commitIdx != 0 {
+			commitRegistry.unregister(c.commitIdx)
+		}
+		if c.rollbackIdx != 0 {
+			rollbackRegistry.unregister(c.rollbackIdx)
+		}
+		if c.updateIdx != 0 {
+			updateRegistry.unregister(c.updateIdx)
+		}
+
 		if rc := C.sqlite3_close(db); rc != OK {
 			err := errMsg(rc, db)
 			if rc == BUSY {
@@ -435,6 +471,17 @@ func (c *Conn) BlobIO(db, tbl, col string, row int64, rw bool) (*BlobIO, error) 
 // https://www.sqlite.org/c3ref/busy_timeout.html
 func (c *Conn) BusyTimeout(d time.Duration) {
 	C.sqlite3_busy_timeout(c.db, C.int(d/time.Millisecond))
+}
+
+// BusyFunc registers a function that is invoked by SQLite when it is unable to
+// acquire a lock on a table. The function f should return true to make another
+// lock acquisition attempt, or false to let the operation fail with BUSY or
+// IOERR_BLOCKED error code.
+// [http://www.sqlite.org/c3ref/busy_handler.html]
+func (c *Conn) BusyFunc(f BusyFunc) {
+	idx := busyRegistry.register(f)
+	c.busyIdx = idx
+	C.set_busy_handler(c.db, unsafe.Pointer(&c.busyIdx), cBool(f != nil))
 }
 
 // FileName returns the full file path of an attached database. An empty string
@@ -1120,4 +1167,43 @@ func blob(stmt *C.sqlite3_stmt, i C.int, copy bool) []byte {
 		return goBytes(p, n)
 	}
 	return nil
+}
+
+// CommitFunc registers a function that is invoked by SQLite before a
+// transaction is committed. It returns the previous commit handler, if any. If
+// the function f returns true, the transaction is rolled back instead, causing
+// the rollback handler to be invoked, if one is registered.
+// [http://www.sqlite.org/c3ref/commit_hook.html]
+func (c *Conn) CommitFunc(f CommitFunc) (prev CommitFunc) {
+	idx := commitRegistry.register(f)
+	prevIdx := c.commitIdx
+	c.commitIdx = idx
+	C.set_commit_hook(c.db, unsafe.Pointer(&c.commitIdx), cBool(f != nil))
+	prev, _ = commitRegistry.unregister(prevIdx).(CommitFunc)
+	return
+}
+
+// RollbackFunc registers a function that is invoked by SQLite when a
+// transaction is rolled back. It returns the previous rollback handler, if any.
+// [http://www.sqlite.org/c3ref/commit_hook.html]
+func (c *Conn) RollbackFunc(f RollbackFunc) (prev RollbackFunc) {
+	idx := rollbackRegistry.register(f)
+	prevIdx := c.rollbackIdx
+	c.rollbackIdx = idx
+	C.set_rollback_hook(c.db, unsafe.Pointer(&c.rollbackIdx), cBool(f != nil))
+	prev, _ = rollbackRegistry.unregister(prevIdx).(RollbackFunc)
+	return
+}
+
+// UpdateFunc registers a function that is invoked by SQLite when a row is
+// updated, inserted, or deleted. It returns the previous update handler, if
+// any.
+// [http://www.sqlite.org/c3ref/update_hook.html]
+func (c *Conn) UpdateFunc(f UpdateFunc) (prev UpdateFunc) {
+	idx := updateRegistry.register(f)
+	prevIdx := c.updateIdx
+	c.updateIdx = idx
+	C.set_update_hook(c.db, unsafe.Pointer(&c.updateIdx), cBool(f != nil))
+	prev, _ = updateRegistry.unregister(prevIdx).(UpdateFunc)
+	return
 }

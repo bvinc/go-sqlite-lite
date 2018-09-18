@@ -12,6 +12,7 @@ import "C"
 import (
 	"fmt"
 	"reflect"
+	"sync"
 	"unsafe"
 )
 
@@ -81,6 +82,25 @@ func (b RawBytes) Copy() []byte {
 // efficiently transfer a large amount of data. The maximum BLOB size can be
 // queried with Conn.Limit(LIMIT_LENGTH, -1).
 type ZeroBlob int
+
+// BusyFunc is a callback function invoked by SQLite when it is unable to
+// acquire a lock on a table. Count is the number of times that the callback has
+// been invoked for this locking event so far. If the function returns false,
+// then the operation is aborted. Otherwise, the function should block for a
+// while before returning true and letting SQLite make another locking attempt.
+type BusyFunc func(count int) (retry bool)
+
+// CommitFunc is a callback function invoked by SQLite before a transaction is
+// committed. If the function returns true, the transaction is rolled back.
+type CommitFunc func() (abort bool)
+
+// RollbackFunc is a callback function invoked by SQLite when a transaction is
+// rolled back.
+type RollbackFunc func()
+
+// UpdateFunc is a callback function invoked by SQLite when a row is updated,
+// inserted, or deleted.
+type UpdateFunc func(op int, db, tbl RawString, row int64)
 
 // Error is returned for all SQLite API result codes other than OK, ROW, and
 // DONE.
@@ -288,4 +308,71 @@ func bstr(b []byte) (s string) {
 		h.Len = len(b)
 	}
 	return
+}
+
+type registry struct {
+	mu    *sync.Mutex
+	index int
+	vals  map[int]interface{}
+}
+
+func newRegistry() *registry {
+	return &registry{
+		mu:    &sync.Mutex{},
+		index: 0,
+		vals:  make(map[int]interface{}),
+	}
+}
+
+func (r *registry) register(val interface{}) int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.index++
+	for r.vals[r.index] != nil || r.index == 0 {
+		r.index++
+	}
+	r.vals[r.index] = val
+	return r.index
+}
+
+func (r *registry) lookup(i int) interface{} {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.vals[i]
+}
+
+func (r *registry) unregister(i int) interface{} {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	prev := r.vals[i]
+	delete(r.vals, i)
+	return prev
+}
+
+//export go_busy_handler
+func go_busy_handler(data unsafe.Pointer, count C.int) (retry C.int) {
+	idx := *(*int)(data)
+	fn := busyRegistry.lookup(idx).(BusyFunc)
+	return cBool(fn(int(count)))
+}
+
+//export go_commit_hook
+func go_commit_hook(data unsafe.Pointer) (abort C.int) {
+	idx := *(*int)(data)
+	fn := commitRegistry.lookup(idx).(CommitFunc)
+	return cBool(fn())
+}
+
+//export go_rollback_hook
+func go_rollback_hook(data unsafe.Pointer) {
+	idx := *(*int)(data)
+	fn := rollbackRegistry.lookup(idx).(RollbackFunc)
+	fn()
+}
+
+//export go_update_hook
+func go_update_hook(data unsafe.Pointer, op C.int, db, tbl *C.char, row C.sqlite3_int64) {
+	idx := *(*int)(data)
+	fn := updateRegistry.lookup(idx).(UpdateFunc)
+	fn(int(op), raw(goStr(db)), raw(goStr(tbl)), int64(row))
 }

@@ -953,3 +953,131 @@ func TestRawStringNull(T *testing.T) {
 	t.exec(c, "CREATE TABLE x(a TEXT)")
 	t.exec(c, "INSERT INTO x VALUES(?)", nil)
 }
+
+func TestTxHandler(T *testing.T) {
+	t := begin(T)
+	defer t.skipRestIfFailed()
+
+	c := t.open(":memory:")
+	defer t.close(c)
+	t.exec(c, "CREATE TABLE x(a)")
+
+	commit := 0
+	rollback := 0
+	c.CommitFunc(func() (abort bool) { commit++; return commit >= 2 })
+	c.RollbackFunc(func() { rollback++ })
+
+	// Allow
+	c.Begin()
+	t.exec(c, "INSERT INTO x VALUES(1)")
+	t.exec(c, "INSERT INTO x VALUES(2)")
+	if err := c.Commit(); err != nil {
+		t.Fatalf("c.Commit() unexpected error: %v", err)
+	}
+
+	// Deny
+	c.Begin()
+	t.exec(c, "INSERT INTO x VALUES(3)")
+	t.exec(c, "INSERT INTO x VALUES(4)")
+	t.errCode(c.Commit(), CONSTRAINT_COMMITHOOK)
+
+	// Verify
+	if commit != 2 || rollback != 1 {
+		t.Fatalf("commit/rollback expected 2/1; got %d/%d", commit, rollback)
+	}
+	s := t.prepare(c, "SELECT * FROM x ORDER BY rowid")
+	defer t.close(s)
+	var i int
+	t.step(s, true)
+	if t.scan(s, &i); i != 1 {
+		t.Fatalf("s.Scan() expected 1; got %d", i)
+	}
+	t.step(s, true)
+	if t.scan(s, &i); i != 2 {
+		t.Fatalf("s.Scan() expected 2; got %d", i)
+	}
+	t.step(s, false)
+}
+
+func TestUpdateHandler(T *testing.T) {
+	t := begin(T)
+	defer t.skipRestIfFailed()
+
+	c := t.open(":memory:")
+	defer t.close(c)
+	t.exec(c, "CREATE TABLE x(a)")
+
+	type update struct {
+		op      int
+		db, tbl string
+		row     int64
+	}
+	var have *update
+	verify := func(want *update) {
+		if !reflect.DeepEqual(have, want) {
+			t.Fatalf(cl("verify() expected %v; got %v"), want, have)
+		}
+	}
+	c.UpdateFunc(func(op int, db, tbl RawString, row int64) {
+		have = &update{op, db.Copy(), tbl.Copy(), row}
+	})
+
+	t.exec(c, "INSERT INTO x VALUES(1)")
+	verify(&update{INSERT, "main", "x", 1})
+
+	t.exec(c, "INSERT INTO x VALUES(2)")
+	verify(&update{INSERT, "main", "x", 2})
+
+	t.exec(c, "UPDATE x SET a=3 WHERE rowid=1")
+	verify(&update{UPDATE, "main", "x", 1})
+
+	t.exec(c, "DELETE FROM x WHERE rowid=2")
+	verify(&update{DELETE, "main", "x", 2})
+}
+
+func TestBusyHandler(T *testing.T) {
+	t := begin(T)
+
+	tmp := t.tmpFile()
+	c1 := t.open(tmp)
+	defer t.close(c1)
+	c2 := t.open(tmp)
+	defer t.close(c2)
+	t.exec(c1, "CREATE TABLE x(a); BEGIN; INSERT INTO x VALUES(1);")
+
+	try := func(sql string, want, terr time.Duration) {
+		start := time.Now()
+		err := c2.Exec(sql)
+		have := time.Since(start)
+		if have < want-terr || want+terr < have {
+			t.Fatalf(cl("c2.Exec(%q) timeout expected %v; got %v"), sql, want, have)
+		}
+		t.errCode(err, BUSY)
+	}
+	want := 100 * time.Millisecond
+	terr := 50 * time.Millisecond
+
+	// Default
+	try("INSERT INTO x VALUES(2)", 0, terr/2)
+
+	// Built-in
+	c2.BusyTimeout(want)
+	try("INSERT INTO x VALUES(3)", want, terr)
+
+	// Custom
+	calls := 0
+	handler := func(count int) (retry bool) {
+		calls++
+		time.Sleep(10 * time.Millisecond)
+		return calls == count+1 && calls < 10
+	}
+	c2.BusyFunc(handler)
+	try("INSERT INTO x VALUES(4)", want, terr)
+	if calls != 10 {
+		t.Fatalf("calls expected 10; got %d", calls)
+	}
+
+	// Disable
+	c2.BusyTimeout(0)
+	try("INSERT INTO x VALUES(5)", 0, terr/2)
+}
