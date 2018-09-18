@@ -38,6 +38,9 @@ if err != nil {
 	...
 }
 defer conn.Close()
+
+// It's always a good idea to set a busy timeout
+conn.BusyTimeout(5 * time.Second)
 ```
 
 ### Executing SQL
