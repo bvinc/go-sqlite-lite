@@ -830,8 +830,6 @@ func (s *Stmt) Bind(args ...interface{}) error {
 			} else {
 				rc = C.bind_blob(s.stmt, C.int(i+1), cBytes(v), C.int(len(v)), 1)
 			}
-		case time.Time:
-			rc = C.sqlite3_bind_int64(s.stmt, C.int(i+1), C.sqlite3_int64(v.Unix()))
 		case RawString:
 			rc = C.bind_text(s.stmt, C.int(i+1), cStr(string(v)), C.int(len(v)), 0)
 		case RawBytes:
@@ -942,8 +940,6 @@ func (s *Stmt) bindNamed(args NamedArgs) error {
 			} else {
 				rc = C.bind_blob(s.stmt, i, cBytes(v), C.int(len(v)), 1)
 			}
-		case time.Time:
-			rc = C.sqlite3_bind_int64(s.stmt, i, C.sqlite3_int64(v.Unix()))
 		case RawString:
 			rc = C.bind_text(s.stmt, i, cStr(string(v)), C.int(len(v)), 0)
 		case RawBytes:
