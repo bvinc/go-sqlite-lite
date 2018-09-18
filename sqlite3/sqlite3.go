@@ -1091,6 +1091,9 @@ func (s *Stmt) scanDynamic(i int, v *interface{}) error {
 // https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) ColumnBlob(i int) (val []byte, err error) {
 	s.assureColTypes()
+	if i >= len(s.colTypes) {
+		return nil, errStr(RANGE)
+	}
 	if s.colTypes[i] == NULL {
 		return nil, nil
 	}
