@@ -77,6 +77,10 @@ func (b RawBytes) Copy() []byte {
 	return C.GoBytes(unsafe.Pointer(h.Data), C.int(h.Len))
 }
 
+type Value struct {
+	ptr *C.sqlite3_value
+}
+
 // ZeroBlob is a special argument type used to allocate a zero-filled BLOB of
 // the specified length. The BLOB can then be opened for incremental I/O to
 // efficiently transfer a large amount of data. The maximum BLOB size can be
