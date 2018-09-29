@@ -1,6 +1,24 @@
 // Copyright 2018 The go-sqlite-lite Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
+//
+// This code was adapted from David Crawshaw's sqlite driver.
+// https://github.com/crawshaw/sqlite
+// The license to the original code is as follows:
+//
+// Copyright (c) 2018 David Crawshaw <david@zentus.com>
+//
+// Permission to use, copy, modify, and distribute this software for any
+// purpose with or without fee is hereby granted, provided that the above
+// copyright notice and this permission notice appear in all copies.
+//
+// THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+// WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+// MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+// ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+// WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+// ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+// OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 package sqlite3
 
 /*
@@ -398,7 +416,6 @@ func strm_w_tramp(pOut unsafe.Pointer, pData *C.char, n C.int) C.int {
 
 //export strm_r_tramp
 func strm_r_tramp(pIn unsafe.Pointer, pData *C.char, pnData *C.int) C.int {
-	// x := getStrm(pIn)
 	r := strmReaderReg.lookup(*(*int)(pIn)).(io.Reader)
 	b := (*[1 << 30]byte)(unsafe.Pointer(pData))[:*pnData:*pnData]
 
@@ -413,7 +430,6 @@ func strm_r_tramp(pIn unsafe.Pointer, pData *C.char, pnData *C.int) C.int {
 		n, err = r.Read(b)
 	}
 
-	//println("*pnData:", *pnData, "n:", n)
 	*pnData = C.int(n)
 	if err != nil && err != io.EOF {
 		return C.SQLITE_IOERR
