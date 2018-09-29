@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// go-sqlite-lite is a SQLite driver for the Go programming language. It is
+// designed to be simple, lightweight, performant, understandable,
+// unsurprising, debuggable, ergonomic, and fully featured.  This driver does
+// not provide a database/sql interface.
 package sqlite3
 
 /*
