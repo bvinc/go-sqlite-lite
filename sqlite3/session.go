@@ -398,13 +398,10 @@ func (cg Changegroup) Output(w io.Writer) (err error) {
 
 //export strm_w_tramp
 func strm_w_tramp(pOut unsafe.Pointer, pData *C.char, n C.int) C.int {
-	// fmt.Println("strm_w_tramp start")
-	// x := getStrm(pOut)
 	w := strmWriterReg.lookup(*(*int)(pOut)).(io.Writer)
 	b := (*[1 << 30]byte)(unsafe.Pointer(pData))[:n:n]
 	for len(b) > 0 {
 		nw, err := w.Write(b)
-		// fmt.Println("strm_w_tramp OK, nw=", nw, "err=", err)
 		b = b[nw:]
 
 		if err != nil {
