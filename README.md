@@ -129,6 +129,7 @@ for {
 
 ### Using Transactions
 ```go
+// Equivalent to conn.Exec("BEGIN")
 err := conn.Begin()
 if err != nil {
 	...
@@ -137,7 +138,8 @@ if err != nil {
 // Do some work
 ...
 
-err := conn.Commit()
+// Equivalent to conn.Exec("COMMIT")
+err = conn.Commit()
 if err != nil {
 	...
 }
