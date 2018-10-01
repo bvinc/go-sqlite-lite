@@ -164,10 +164,10 @@ func insertStudents(conn *sqlite3.Conn) error {
 * Binding parameters to statements using SQLite named parameters.
 * SQLite Blob Incremental IO API.
 * SQLite Online Backup API.
-* SQLITE Session extension.
+* SQLite Session extension.
 * Supports setting a custom busy handler
 * Supports callback hooks on commit, rollback, and update.
-* If shared cache mode is enabled and one statement receives a `SQLITE_LOCKED` error, the SQLITE [unlock_notify](https://sqlite.org/unlock_notify.html) extension is used to transparently block and try again when the conflicting statement finishes.
+* If shared cache mode is enabled and one statement receives a `SQLITE_LOCKED` error, the SQLite [unlock_notify](https://sqlite.org/unlock_notify.html) extension is used to transparently block and try again when the conflicting statement finishes.
 * Compiled with SQLite support for JSON1, RTREE, FTS5, GEOPOLY, STAT4, and SOUNDEX.
 * Compiled with SQLite support for OFFSET/LIMIT on UPDATE and DELETE statements.
 * RawString and RawBytes can be used to reduce copying between Go and SQLite.  Please use with caution.
