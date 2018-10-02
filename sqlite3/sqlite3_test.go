@@ -1101,3 +1101,50 @@ func TestLocked(T *testing.T) {
 		t.Fatalf("expected SQLITE_LOCKED")
 	}
 }
+
+func TestWithTx(T *testing.T) {
+	t := begin(T)
+	conn, err := Open(":memory:", OPEN_READWRITE)
+	if err != nil {
+		t.Fatalf("failed to open")
+	}
+
+	err = conn.Exec(`CREATE TABLE student(name STRING, age INTEGER)`)
+	if err != nil {
+		t.Fatalf("failed to create table")
+	}
+
+	conn.WithTx(func() error {
+		err = conn.Exec(`INSERT INTO student VALUES (?, ?)`, "Bob", 18)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("failed to insert student")
+	}
+
+	conn.WithTxExclusive(func() error {
+		err = conn.Exec(`INSERT INTO student VALUES (?, ?)`, "Bob", 18)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("failed to insert student")
+	}
+
+	conn.WithTxImmediate(func() error {
+		err = conn.Exec(`INSERT INTO student VALUES (?, ?)`, "Bob", 18)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("failed to insert student")
+	}
+
+}
