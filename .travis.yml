@@ -1,11 +1,17 @@
-language: "go"
-
+language: go
 go:
-  - "1.9.x"
-  - "1.10.x"
-  - "1.11.x"
-  - "1.x"
-
+- 1.9.x
+- 1.10.x
+- 1.11.x
+- 1.x
 os:
-  - "linux"
-  - "osx"
+- linux
+- osx
+COVERALLS_TOKEN=kjF7KRJSH0AuMV7g4f341DLWqSZPzW5yG:
+  secure: bmRjhHvoATL7i+rUZ1EMirnJwb7mT3/fiolRuUqbgH7d8uIlv5uRElcC7ZHuT4sqe+0ia4t3Xl1hCu758wF0nZTAiu2QKrOIXE38gSbd/dbCt2/z9vtyK/ndG214/EdKYQpNV0VNPWI2Ar1weDLpb/WZ/GaPWq21i2VhL/uQF00FDiVbMpGp3hHaVLElzetKH38UsJKLj2NXA4FqqQVER4aj3gkzeGDkv0tfPoitSG3iHt61Nl8G/Sobidq7ioCompd0tCHL1zThXTDP4q5SbH7fMuexFmjHhZ3KCfdsqPz43fSegqb8hTQOMXTm6HKX51RRlv4FV40rllNm7MAZz65F3pvYZ4sUZfpViqN5Tp4YDWc2NKuK7l8mgCNqA0tYXezOhbteVaqqbY3uc1P/vzXLRvqkVtbOAj/bOrw+rdrRddxzRn4XNmOtySo+CRdP+etmsUlBspb8QyEWIabAgJ6k1KdtmQDAopxlXro2gpMJImjJZ+fm7ao2IuEsuo3Q1lmI3SF6hlU7CWMdr3lNbxHm7zL5m2lSGveUDgS2gRBq1e+T+OPeJ38kZ9JFGn7uRRmAy9a9rRD7q8PrTiPsWHVAjjBmyECj+vcr2/g7knQsPJgb7evHGF+/dRRrQM+e4OLkLohOnh+6xNtwQdP64Xe7BYCh+E7TeaOExupCUTY=
+install:
+  go get golang.org/x/tools/cmd/cover
+  go get github.com/mattn/goveralls
+script:
+  go test -v -covermode=count -coverprofile=coverage.out
+$HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
