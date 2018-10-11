@@ -125,7 +125,7 @@ for {
 	}
 	fmt.Println("name:", name, "age:", age)
 }
-// Remember to Reset the statement if you would like to Bind new arguments and reuse the prepared staement
+// Remember to Reset the statement if you would like to Bind new arguments and reuse the prepared statement
 ```
 
 ### Using Transactions
@@ -176,7 +176,7 @@ func insertStudents(conn *sqlite3.Conn) error {
 * RawString and RawBytes can be used to reduce copying between Go and SQLite.  Please use with caution.
 
 ## Credit
-This project begain as a fork of https://github.com/mxk/go-sqlite/
+This project began as a fork of https://github.com/mxk/go-sqlite/
 
 ## FAQ
 
@@ -184,11 +184,11 @@ This project begain as a fork of https://github.com/mxk/go-sqlite/
 
 If a `database/sql` interface is required, please use https://github.com/mattn/go-sqlite3 .  In my experience, using a `database/sql` interface with SQLite is painful.  Connection pooling causes unnecessary overhead and weirdness.  Transactions using `Exec("BEGIN")` don't work as expected.  Your connection does not correspond to SQLite's concept of a connection.  PRAGMA commands do not work as expected.  When you hit SQLite errors, such as locking or busy errors, it's difficult to discover why since you don't know which connection received which SQL and in what order.
 
-* **What are the differences betwen this driver and the mxk/go-sqlite driver?**
+* **What are the differences between this driver and the mxk/go-sqlite driver?**
 
 This driver was forked from `mxk/go-sqlite-driver`.  It hadn't been maintained in years and used an ancient version of SQLite.  A large number of features were removed, reworked, and renamed.  A lot of smartness and state was removed.  It is now much easier to upgrade to newer versions of SQLite since the `codec` feature was removed.  The behavior of methods now lines up closely with the behavior of SQLite's C API.
 
-* **What are the differences betwen this driver and the crawshaw/sqlite driver?**
+* **What are the differences between this driver and the crawshaw/sqlite driver?**
 
 The crawshaw driver is pretty well thought out and solves a lot of the same problems as this
 driver.  There are a few places where our philosophies differ.  The crawshaw driver defaults (when flags of 0 are given) to SQLite shared cache mode and WAL mode.  The default WAL synchronous mode is changed.  Prepared statements are transparently cached.  Connection pools are provided.  I would be opposed to making most of these changes to this driver.  I would like this driver to provide a default, light, and unsurprising SQLite experience.
@@ -199,7 +199,7 @@ No finalizers are used in this driver.  You are responsible for closing connecti
 
 * **Is it thread safe?**
 
-go-sqlite-lite is as thread safe as SQLite.  SQLite with this driver is compiled with `-DSQLITE_THREADSAFE=2` which is **Multi-thread** mode.  In this mode, SQLite can be safely used by multiple threads provided that no single database connection is used simultaneously in two or more threads.  This applies to goroutines.  A single database conneciton should not be used simultaneously between two goroutines.
+go-sqlite-lite is as thread safe as SQLite.  SQLite with this driver is compiled with `-DSQLITE_THREADSAFE=2` which is **Multi-thread** mode.  In this mode, SQLite can be safely used by multiple threads provided that no single database connection is used simultaneously in two or more threads.  This applies to goroutines.  A single database connection should not be used simultaneously between two goroutines.
 
 It is safe to use separate connection instances concurrently, even if they are accessing the same database file. For example:
 ```go
