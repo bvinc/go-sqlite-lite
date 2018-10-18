@@ -19,6 +19,11 @@ func main2() error {
 		return fmt.Errorf("failed to open database: %v", err)
 	}
 	defer conn.Close()
+	
+	err = conn.Exec(`DROP TABLE if exists student`)
+	if err != nil {
+		return fmt.Errorf("failed to drop students table: %v", err)
+	}
 
 	err = conn.Exec(`CREATE TABLE student(name STRING, age INTEGER)`)
 	if err != nil {
