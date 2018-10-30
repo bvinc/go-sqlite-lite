@@ -310,7 +310,7 @@ func Open(name string, flagArgs ...int) (*Conn, error) {
 	}
 	rc := C.sqlite3_open_v2(cStr(name), &db, C.int(flags), nil)
 	if rc != OK {
-		err := errMsg(rc, db)
+		err := libErr(rc, db)
 		C.sqlite3_close(db)
 		return nil, err
 	}
@@ -346,7 +346,7 @@ func (c *Conn) Close() error {
 		}
 
 		if rc := C.sqlite3_close(db); rc != OK {
-			err := errMsg(rc, db)
+			err := libErr(rc, db)
 			if rc == BUSY {
 				C.sqlite3_close_v2(db)
 			}
@@ -370,7 +370,7 @@ func (c *Conn) Prepare(sql string, args ...interface{}) (s *Stmt, err error) {
 	var cTail *C.char
 	rc := C.sqlite3_blocking_prepare_v2(c.db, cStr(zSQL), -1, &stmt, &cTail)
 	if rc != OK {
-		return nil, errStr(rc)
+		return nil, libErr(rc, c.db)
 	}
 
 	if stmt == nil {
@@ -662,7 +662,7 @@ func (c *Conn) Limit(id, value int) (prev int) {
 // exec calls sqlite3_exec on sql, which must be a null-terminated C string.
 func (c *Conn) exec(sql *C.char) error {
 	if rc := C.sqlite3_exec(c.db, sql, nil, nil, nil); rc != OK {
-		return errMsg(rc, c.db)
+		return libErr(rc, c.db)
 	}
 	return nil
 }
@@ -689,7 +689,7 @@ func (s *Stmt) Close() error {
 	rc := C.sqlite3_finalize(s.stmt)
 	s.stmt = nil
 	if rc != OK {
-		return errStr(rc)
+		return libErr(rc, s.db)
 	}
 	return nil
 }
@@ -1113,7 +1113,7 @@ func (s *Stmt) ColumnBlob(i int) (val []byte, err error) {
 	p := C.sqlite3_column_blob(s.stmt, C.int(i))
 	if p == nil {
 		rc := C.sqlite3_errcode(s.db)
-		return nil, errMsg(rc, s.db)
+		return nil, libErr(rc, s.db)
 	}
 
 	// Copy the blob
@@ -1188,7 +1188,7 @@ func (s *Stmt) ColumnText(i int) (val string, ok bool, err error) {
 	p := (*C.char)(unsafe.Pointer(C.sqlite3_column_text(s.stmt, C.int(i))))
 	if p == nil {
 		rc := C.sqlite3_errcode(s.db)
-		return "", false, errMsg(rc, s.db)
+		return "", false, libErr(rc, s.db)
 	}
 
 	// Copy the string
@@ -1230,7 +1230,7 @@ func (s *Stmt) ColumnRawBytes(i int) (val RawBytes, err error) {
 	p := C.sqlite3_column_blob(s.stmt, C.int(i))
 	if p == nil {
 		rc := C.sqlite3_errcode(s.db)
-		return nil, errMsg(rc, s.db)
+		return nil, libErr(rc, s.db)
 	}
 
 	// Don't copy the blob
@@ -1260,7 +1260,7 @@ func (s *Stmt) ColumnRawString(i int) (val RawString, ok bool, err error) {
 	p := (*C.char)(unsafe.Pointer(C.sqlite3_column_text(s.stmt, C.int(i))))
 	if p == nil {
 		rc := C.sqlite3_errcode(s.db)
-		return "", false, errMsg(rc, s.db)
+		return "", false, libErr(rc, s.db)
 	}
 
 	// Don't copy the string

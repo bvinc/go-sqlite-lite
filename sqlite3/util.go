@@ -123,11 +123,14 @@ func errStr(rc C.int) error {
 	return &Error{int(rc), C.GoString(C.sqlite3_errstr(rc))}
 }
 
-func errMsg(rc C.int, db *C.sqlite3) error {
-	if db == nil {
-		return errStr(rc)
+// libErr reports an error originating in SQLite. The error message is obtained
+// from the database connection when possible, which may include some additional
+// information. Otherwise, the result code is translated to a generic message.
+func libErr(rc C.int, db *C.sqlite3) error {
+	if db != nil && rc == C.sqlite3_errcode(db) {
+		return &Error{int(rc), C.GoString(C.sqlite3_errmsg(db))}
 	}
-	return &Error{int(rc), C.GoString(C.sqlite3_errmsg(db))}
+	return &Error{int(rc), C.GoString(C.sqlite3_errstr(rc))}
 }
 
 // pkgErr reports an error originating in this package.

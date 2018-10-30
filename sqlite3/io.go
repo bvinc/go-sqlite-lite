@@ -43,7 +43,7 @@ func newBlobIO(c *Conn, db, tbl, col string, row int64, rw bool) (*BlobIO, error
 	rc := C.sqlite3_blob_open(c.db, cStr(db), cStr(tbl), cStr(col),
 		C.sqlite3_int64(row), cBool(rw), &blob)
 	if rc != OK {
-		return nil, errMsg(rc, c.db)
+		return nil, libErr(rc, c.db)
 	}
 
 	b := &BlobIO{
@@ -68,7 +68,7 @@ func (b *BlobIO) Close() error {
 		b.off = 0
 		runtime.SetFinalizer(b, nil)
 		if rc := C.sqlite3_blob_close(blob); rc != OK {
-			return errMsg(rc, b.conn.db)
+			return libErr(rc, b.conn.db)
 		}
 	}
 	return nil
@@ -158,7 +158,7 @@ func (b *BlobIO) Reopen(row int64) error {
 		return ErrBadIO
 	}
 	if rc := C.sqlite3_blob_reopen(b.blob, C.sqlite3_int64(row)); rc != OK {
-		err := errMsg(rc, b.conn.db)
+		err := libErr(rc, b.conn.db)
 		b.Close()
 		return err
 	}
@@ -174,7 +174,7 @@ func (b *BlobIO) io(rc C.int, n int) (int, error) {
 		b.off += n
 		return n, nil
 	}
-	err := errMsg(rc, b.conn.db)
+	err := libErr(rc, b.conn.db)
 	if rc == ABORT {
 		b.Close()
 	}

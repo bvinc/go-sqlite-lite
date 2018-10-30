@@ -29,7 +29,7 @@ func newBackup(src *Conn, srcName string, dst *Conn, dstName string) (*Backup, e
 
 	bkup := C.sqlite3_backup_init(dst.db, cStr(dstName), src.db, cStr(srcName))
 	if bkup == nil {
-		return nil, errMsg(C.sqlite3_errcode(dst.db), dst.db)
+		return nil, libErr(C.sqlite3_errcode(dst.db), dst.db)
 	}
 
 	b := &Backup{src, dst, bkup}
@@ -43,7 +43,7 @@ func (b *Backup) Close() error {
 	if bkup := b.bkup; bkup != nil {
 		b.bkup = nil
 		if rc := C.sqlite3_backup_finish(bkup); rc != OK {
-			return errMsg(rc, b.dst.db)
+			return libErr(rc, b.dst.db)
 		}
 	}
 	return nil
@@ -69,7 +69,7 @@ func (b *Backup) Step(n int) error {
 		if rc == DONE {
 			return io.EOF
 		}
-		return errMsg(rc, b.dst.db)
+		return libErr(rc, b.dst.db)
 	}
 	return nil
 }
