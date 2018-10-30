@@ -19,8 +19,9 @@ Most database drivers include a layer to work nicely with the Go `database/sql` 
 
 ## Releases
 
-* 2018-10-11 **v0.4.1** - Fixed an issue with new go 1.11 modules.
-* 2018-09-29 **v0.4.0** - SQLite version 3.25.2.  Add support for the Session extension.
+* 2018-10-30 **v0.4.2** - Better error messages from SQLite
+* 2018-10-11 **v0.4.1** - Fixed an issue with new go 1.11 modules
+* 2018-09-29 **v0.4.0** - SQLite version 3.25.2.  Add support for the Session extension
 * 2018-09-16 **v0.3.1** - Forgot to update sqlite3.h
 * 2018-09-16 **v0.3.0** - SQLite version 3.25.0
 * 2018-09-14 **v0.2.0** - Proper error and NULL handling on Column* methods.  Empty blobs and empty strings are now distinct from NULL in all cases.  A nil byte slice is interpreted as NULL for binding purposes as well as Column* methods.
