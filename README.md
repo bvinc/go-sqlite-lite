@@ -131,6 +131,42 @@ for {
 // Remember to Reset the statement if you would like to Bind new arguments and reuse the prepared statement
 ```
 
+### Getting columns that might be NULL
+Scan can be convenient to use, but it doesn't handle NULL values.  To get full control of column values, there are column methods for each type.
+```go
+name, ok, err := stmt.ColumnText(0)
+if err != nil {
+	// Either the column index was out of range, or SQLite failed to allocate memory
+	...
+}
+if !ok {
+	// The column was NULL
+}
+
+age, ok, err := stmt.ColumnInt(1)
+if err != nil {
+	// Can only fail if the column index is out of range
+	...
+}
+if !ok {
+	// The column was NULL
+}
+```
+
+`ColumnBlob` returns a nil slice in the case of NULL.
+```go
+blob, err := stmt.ColumnBlob(i)
+if err != nil {
+	// Either the column index was out of range, or SQLite failed to allocate memory
+	...
+}
+if blob == nil {
+	// The column was NULL
+}
+```
+
+
+
 ### Using Transactions
 ```go
 // Equivalent to conn.Exec("BEGIN")
