@@ -45,7 +45,7 @@ package sqlite3
 #cgo openbsd LDFLAGS: -lm
 
 #cgo linux,!android CFLAGS: -DHAVE_FDATASYNC=1
-#cgo linux,!android CFLAGS: -DHAVE_PREAD64=1 -DHAVE_PWRITE64=1
+#cgo linux,!android CFLAGS: -DHAVE_PREAD=1 -DHAVE_PWRITE=1
 
 #cgo windows LDFLAGS: -Wl,-Bstatic -lwinpthread -Wl,-Bdynamic
 
