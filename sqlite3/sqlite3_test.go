@@ -1109,7 +1109,7 @@ func TestWithTx(T *testing.T) {
 		t.Fatalf("failed to open")
 	}
 
-	err = conn.Exec(`CREATE TABLE student(name STRING, age INTEGER)`)
+	err = conn.Exec(`CREATE TABLE student(name TEXT, age INTEGER)`)
 	if err != nil {
 		t.Fatalf("failed to create table")
 	}
