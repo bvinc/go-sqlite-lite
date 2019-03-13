@@ -474,7 +474,7 @@ func (c *Conn) WithTx(f func() error) error {
 	err := f()
 	if err != nil {
 		err2 := c.Rollback()
-		if err2 != nil {
+		if err2 == nil {
 			return err
 		}
 		return fmt.Errorf("%v, additionally rolling back transaction failed: %v", err, err2)
@@ -499,7 +499,7 @@ func (c *Conn) WithTxImmediate(f func() error) error {
 	err := f()
 	if err != nil {
 		err2 := c.Rollback()
-		if err2 != nil {
+		if err2 == nil {
 			return err
 		}
 		return fmt.Errorf("%v, additionally rolling back transaction failed: %v", err, err2)
@@ -523,7 +523,7 @@ func (c *Conn) WithTxExclusive(f func() error) error {
 	err := f()
 	if err != nil {
 		err2 := c.Rollback()
-		if err2 != nil {
+		if err2 == nil {
 			return err
 		}
 		return fmt.Errorf("%v, additionally rolling back transaction failed: %v", err, err2)
