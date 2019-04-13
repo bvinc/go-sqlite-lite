@@ -1034,6 +1034,36 @@ func TestUpdateHandler(T *testing.T) {
 	verify(&update{DELETE, "main", "x", 2})
 }
 
+func TestAuthorizerHandler(T *testing.T) {
+	t := begin(T)
+	defer t.skipRestIfFailed()
+
+	c := t.open(":memory:")
+	defer t.close(c)
+	t.exec(c, "CREATE TABLE x(a)")
+
+	type authorizer struct {
+		op                     int
+		arg1, arg2, db, entity string
+	}
+	var have *authorizer
+	verify := func(want *authorizer) {
+		if !reflect.DeepEqual(have, want) {
+			t.Fatalf(cl("verify() expected %v; got %v"), want, have)
+		}
+	}
+	c.AuthorizerFunc(func(op int, arg1, arg2, db, entity RawString) int {
+		have = &authorizer{op, arg1.Copy(), arg2.Copy(), db.Copy(), entity.Copy()}
+		return OK
+	})
+
+	t.exec(c, "INSERT INTO x VALUES(1)")
+	verify(&authorizer{INSERT, "x", "", "main", ""})
+
+	t.exec(c, "SELECT * FROM x")
+	verify(&authorizer{READ, "x", "a", "main", ""})
+}
+
 func TestBusyHandler(T *testing.T) {
 	t := begin(T)
 

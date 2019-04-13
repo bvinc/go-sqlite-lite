@@ -106,6 +106,9 @@ type RollbackFunc func()
 // inserted, or deleted.
 type UpdateFunc func(op int, db, tbl RawString, row int64)
 
+// AuthorizerFunc is a callback function invoked by SQLite when statement is compiled.
+type AuthorizerFunc func(op int, arg1, arg2, db, entity RawString) int
+
 // Error is returned for all SQLite API result codes other than OK, ROW, and
 // DONE.
 type Error struct {
@@ -382,4 +385,11 @@ func go_update_hook(data unsafe.Pointer, op C.int, db, tbl *C.char, row C.sqlite
 	idx := *(*int)(data)
 	fn := updateRegistry.lookup(idx).(UpdateFunc)
 	fn(int(op), raw(goStr(db)), raw(goStr(tbl)), int64(row))
+}
+
+//export go_set_authorizer
+func go_set_authorizer(data unsafe.Pointer, op C.int, arg1, arg2, db, entity *C.char) C.int {
+	idx := *(*int)(data)
+	fn := authorizerRegistry.lookup(idx).(AuthorizerFunc)
+	return C.int(fn(int(op), raw(goStr(arg1)), raw(goStr(arg2)), raw(goStr(db)), raw(goStr(entity))))
 }
