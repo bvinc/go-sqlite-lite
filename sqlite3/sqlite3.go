@@ -29,7 +29,6 @@ package sqlite3
 #cgo CFLAGS: -DSQLITE_ENABLE_STAT4=1
 #cgo CFLAGS: -DSQLITE_ENABLE_UNLOCK_NOTIFY
 #cgo CFLAGS: -DSQLITE_ENABLE_UPDATE_DELETE_LIMIT=1
-#cgo CFLAGS: -DSQLITE_OMIT_AUTHORIZATION=1
 #cgo CFLAGS: -DSQLITE_OMIT_AUTOINIT=1
 #cgo CFLAGS: -DSQLITE_OMIT_DEPRECATED=1
 #cgo CFLAGS: -DSQLITE_OMIT_PROGRESS_CALLBACK=1
@@ -102,12 +101,13 @@ int go_busy_handler(void*,int);
 int go_commit_hook(void*);
 void go_rollback_hook(void*);
 void go_update_hook(void* data, int op,const char *db, const char *tbl, sqlite3_int64 row);
+int go_set_authorizer(void* data, int op, const char *arg1, const char *arg2, const char *db, const char *entity);
 
 SET(busy_handler)
 SET(commit_hook)
 SET(rollback_hook)
 SET(update_hook)
-
+SET(set_authorizer)
 
 // A pointer to an instance of this structure is passed as the user-context
 // pointer when registering for an unlock-notify callback.
@@ -259,6 +259,7 @@ var busyRegistry = newRegistry()
 var commitRegistry = newRegistry()
 var rollbackRegistry = newRegistry()
 var updateRegistry = newRegistry()
+var authorizerRegistry = newRegistry()
 
 func init() {
 	// Initialize SQLite (required with SQLITE_OMIT_AUTOINIT).
@@ -280,10 +281,11 @@ func init() {
 type Conn struct {
 	db *C.sqlite3
 
-	busyIdx     int
-	commitIdx   int
-	rollbackIdx int
-	updateIdx   int
+	busyIdx       int
+	commitIdx     int
+	rollbackIdx   int
+	updateIdx     int
+	authorizerIdx int
 }
 
 // Open creates a new connection to a SQLite database. The name can be 1) a path
@@ -1349,5 +1351,20 @@ func (c *Conn) UpdateFunc(f UpdateFunc) (prev UpdateFunc) {
 	c.updateIdx = idx
 	C.set_update_hook(c.db, unsafe.Pointer(&c.updateIdx), cBool(f != nil))
 	prev, _ = updateRegistry.unregister(prevIdx).(UpdateFunc)
+	return
+}
+
+// AuthorizerFunc registers a function that is invoked by SQLite During sql
+// statement compilation. Function can return sqlite3.OK to accept statement,
+// sqlite3.IGNORE to disallow specyfic action, but allow further statement
+// processing, or sqlite3.DENY to deny action completly and stop processing.
+//
+// [https://www.sqlite.org/c3ref/set_authorizer.html]
+func (c *Conn) AuthorizerFunc(f AuthorizerFunc) (prev AuthorizerFunc) {
+	idx := authorizerRegistry.register(f)
+	prevIdx := c.authorizerIdx
+	c.authorizerIdx = idx
+	C.set_set_authorizer(c.db, unsafe.Pointer(&c.authorizerIdx), cBool(f != nil))
+	prev, _ = authorizerRegistry.unregister(prevIdx).(AuthorizerFunc)
 	return
 }
