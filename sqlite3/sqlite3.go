@@ -348,6 +348,9 @@ func (c *Conn) Close() error {
 		if c.updateIdx != 0 {
 			updateRegistry.unregister(c.updateIdx)
 		}
+		if c.authorizerIdx != 0 {
+			authorizerRegistry.unregister(c.authorizerIdx)
+		}
 
 		if rc := C.sqlite3_close(db); rc != OK {
 			err := libErr(rc, db)
