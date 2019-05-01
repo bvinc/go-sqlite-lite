@@ -5,6 +5,7 @@ package sqlite3
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -1114,7 +1115,7 @@ func TestWithTx(T *testing.T) {
 		t.Fatalf("failed to create table")
 	}
 
-	conn.WithTx(func() error {
+	err = conn.WithTx(func() error {
 		err = conn.Exec(`INSERT INTO student VALUES (?, ?)`, "Bob", 18)
 		if err != nil {
 			return err
@@ -1125,7 +1126,15 @@ func TestWithTx(T *testing.T) {
 		t.Fatalf("failed to insert student")
 	}
 
-	conn.WithTxExclusive(func() error {
+	aberr := errors.New("abort operations")
+	err = conn.WithTx(func() error {
+		return aberr
+	})
+	if err != aberr {
+		t.Fatalf("WithTx hasn't returned the original error")
+	}
+
+	err = conn.WithTxExclusive(func() error {
 		err = conn.Exec(`INSERT INTO student VALUES (?, ?)`, "Bob", 18)
 		if err != nil {
 			return err
@@ -1136,7 +1145,14 @@ func TestWithTx(T *testing.T) {
 		t.Fatalf("failed to insert student")
 	}
 
-	conn.WithTxImmediate(func() error {
+	err = conn.WithTxExclusive(func() error {
+		return aberr
+	})
+	if err != aberr {
+		t.Fatalf("WithTxExclusive hasn't returned the original error")
+	}
+
+	err = conn.WithTxImmediate(func() error {
 		err = conn.Exec(`INSERT INTO student VALUES (?, ?)`, "Bob", 18)
 		if err != nil {
 			return err
@@ -1147,4 +1163,10 @@ func TestWithTx(T *testing.T) {
 		t.Fatalf("failed to insert student")
 	}
 
+	err = conn.WithTxImmediate(func() error {
+		return aberr
+	})
+	if err != aberr {
+		t.Fatalf("WithTxImmediate hasn't returned the original error")
+	}
 }
