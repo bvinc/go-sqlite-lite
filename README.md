@@ -19,6 +19,7 @@ Most database drivers include a layer to work nicely with the Go `database/sql` 
 
 ## Releases
 
+* 2019-05-01 **v0.6.0** - SQLite version 3.28.0
 * 2019-02-05 **v0.5.0** - SQLite version 3.26.0
 * 2018-10-30 **v0.4.2** - Better error messages from SQLite
 * 2018-10-11 **v0.4.1** - Fixed an issue with new go 1.11 modules
