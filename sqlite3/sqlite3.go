@@ -609,9 +609,8 @@ func (c *Conn) BlobIO(db, tbl, col string, row int64, rw bool) (*BlobIO, error) 
 }
 
 // BusyTimeout enables the built-in busy handler, which retries the table
-// locking operation for the specified duration before aborting. It returns the
-// callback function that was previously registered with Conn.BusyFunc, if any.
-// The busy handler is disabled if d is negative or zero.
+// locking operation for the specified duration before aborting. The busy
+// handler is disabled if d is negative or zero.
 // https://www.sqlite.org/c3ref/busy_timeout.html
 func (c *Conn) BusyTimeout(d time.Duration) {
 	C.sqlite3_busy_timeout(c.db, C.int(d/time.Millisecond))
