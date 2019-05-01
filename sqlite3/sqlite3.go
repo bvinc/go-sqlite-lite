@@ -851,7 +851,7 @@ func (s *Stmt) Bind(args ...interface{}) error {
 			rc = C.sqlite3_bind_zeroblob(s.stmt, C.int(i+1), C.int(v))
 		case NamedArgs:
 			if i != 0 || len(args) != 1 {
-				return pkgErr(MISUSE, "RowArgs must be used as the only argument to Bind()")
+				return pkgErr(MISUSE, "NamedArgs must be used as the only argument to Bind()")
 			}
 			return s.bindNamed(v)
 		default:
@@ -1270,38 +1270,6 @@ func (s *Stmt) ColumnRawString(i int) (val RawString, ok bool, err error) {
 
 	// Don't copy the string
 	return RawString(goStrN(p, n)), true, nil
-}
-
-// namedArgs checks if args contains named parameter values, and if so, returns
-// the NamedArgs map.
-func namedArgs(args []interface{}) (named NamedArgs) {
-	if len(args) == 1 {
-		named, _ = args[0].(NamedArgs)
-	}
-	return
-}
-
-// resize changes len(s) to n, reallocating s if needed.
-func resize(s []string, n int) []string {
-	if n <= cap(s) {
-		return s[:n]
-	}
-	tmp := make([]string, n)
-	copy(tmp, s[:cap(s)])
-	return tmp
-}
-
-// text returns the value of column i as a UTF-8 string. If copy is false, the
-// string will point to memory allocated by SQLite.
-func text(stmt *C.sqlite3_stmt, i C.int, copy bool) string {
-	p := (*C.char)(unsafe.Pointer(C.sqlite3_column_text(stmt, i)))
-	if n := C.sqlite3_column_bytes(stmt, i); n > 0 {
-		if copy {
-			return C.GoStringN(p, n)
-		}
-		return goStrN(p, n)
-	}
-	return ""
 }
 
 // blob returns the value of column i as a []byte. If copy is false, the []byte

@@ -310,16 +310,6 @@ func goBytes(p unsafe.Pointer, n C.int) (b []byte) {
 	return
 }
 
-// bstr returns a string pointing into the byte slice b.
-func bstr(b []byte) (s string) {
-	if len(b) > 0 {
-		h := (*reflect.StringHeader)(unsafe.Pointer(&s))
-		h.Data = uintptr(unsafe.Pointer(&b[0]))
-		h.Len = len(b)
-	}
-	return
-}
-
 type registry struct {
 	mu    *sync.Mutex
 	index int

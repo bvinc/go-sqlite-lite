@@ -41,8 +41,6 @@ var strmWriterReg = newRegistry()
 var strmReaderReg = newRegistry()
 var xapplyReg = newRegistry()
 
-type patchSetStrmCB = func(pOut unsafe.Pointer, pData unsafe.Pointer, nData C.int)
-
 type Session struct {
 	sess *C.sqlite3_session
 }
