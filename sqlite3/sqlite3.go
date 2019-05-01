@@ -865,9 +865,8 @@ func (s *Stmt) Bind(args ...interface{}) error {
 }
 
 // Scan retrieves data from the current row, storing successive column values
-// into successive arguments. If the last argument is an instance of RowMap,
-// then all remaining column/value pairs are assigned into the map. The same row
-// may be scanned multiple times. Nil arguments are silently skipped.
+// into successive arguments. The same row may be scanned multiple times. Nil
+// arguments are silently skipped.
 // https://www.sqlite.org/c3ref/column_blob.html
 func (s *Stmt) Scan(dst ...interface{}) error {
 	n := len(dst)
