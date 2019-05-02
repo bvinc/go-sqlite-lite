@@ -19,6 +19,7 @@ Most database drivers include a layer to work nicely with the Go `database/sql` 
 
 ## Releases
 
+* 2019-05-01 **v0.6.1** - Bug fixes, authorizer callback support
 * 2019-05-01 **v0.6.0** - SQLite version 3.28.0
 * 2019-02-05 **v0.5.0** - SQLite version 3.26.0
 * 2018-10-30 **v0.4.2** - Better error messages from SQLite
@@ -211,6 +212,7 @@ func insertStudents(conn *sqlite3.Conn) error {
 * SQLite Session extension.
 * Supports setting a custom busy handler
 * Supports callback hooks on commit, rollback, and update.
+* Supports setting compile-Time authorization callbacks.
 * If shared cache mode is enabled and one statement receives a `SQLITE_LOCKED` error, the SQLite [unlock_notify](https://sqlite.org/unlock_notify.html) extension is used to transparently block and try again when the conflicting statement finishes.
 * Compiled with SQLite support for JSON1, RTREE, FTS5, GEOPOLY, STAT4, and SOUNDEX.
 * Compiled with SQLite support for OFFSET/LIMIT on UPDATE and DELETE statements.
