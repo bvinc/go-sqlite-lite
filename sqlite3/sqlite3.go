@@ -625,7 +625,7 @@ func (c *Conn) BusyTimeout(d time.Duration) {
 // acquire a lock on a table. The function f should return true to make another
 // lock acquisition attempt, or false to let the operation fail with BUSY or
 // IOERR_BLOCKED error code.
-// [http://www.sqlite.org/c3ref/busy_handler.html]
+// https://www.sqlite.org/c3ref/busy_handler.html
 func (c *Conn) BusyFunc(f BusyFunc) {
 	idx := busyRegistry.register(f)
 	c.busyIdx = idx
@@ -1289,7 +1289,7 @@ func blob(stmt *C.sqlite3_stmt, i C.int, copy bool) []byte {
 // transaction is committed. It returns the previous commit handler, if any. If
 // the function f returns true, the transaction is rolled back instead, causing
 // the rollback handler to be invoked, if one is registered.
-// [http://www.sqlite.org/c3ref/commit_hook.html]
+// https://www.sqlite.org/c3ref/commit_hook.html
 func (c *Conn) CommitFunc(f CommitFunc) (prev CommitFunc) {
 	idx := commitRegistry.register(f)
 	prevIdx := c.commitIdx
@@ -1301,7 +1301,7 @@ func (c *Conn) CommitFunc(f CommitFunc) (prev CommitFunc) {
 
 // RollbackFunc registers a function that is invoked by SQLite when a
 // transaction is rolled back. It returns the previous rollback handler, if any.
-// [http://www.sqlite.org/c3ref/commit_hook.html]
+// https://www.sqlite.org/c3ref/commit_hook.html
 func (c *Conn) RollbackFunc(f RollbackFunc) (prev RollbackFunc) {
 	idx := rollbackRegistry.register(f)
 	prevIdx := c.rollbackIdx
@@ -1314,7 +1314,7 @@ func (c *Conn) RollbackFunc(f RollbackFunc) (prev RollbackFunc) {
 // UpdateFunc registers a function that is invoked by SQLite when a row is
 // updated, inserted, or deleted. It returns the previous update handler, if
 // any.
-// [http://www.sqlite.org/c3ref/update_hook.html]
+// https://www.sqlite.org/c3ref/update_hook.html
 func (c *Conn) UpdateFunc(f UpdateFunc) (prev UpdateFunc) {
 	idx := updateRegistry.register(f)
 	prevIdx := c.updateIdx
@@ -1328,8 +1328,7 @@ func (c *Conn) UpdateFunc(f UpdateFunc) (prev UpdateFunc) {
 // statement compilation. Function can return sqlite3.OK to accept statement,
 // sqlite3.IGNORE to disallow specyfic action, but allow further statement
 // processing, or sqlite3.DENY to deny action completly and stop processing.
-//
-// [https://www.sqlite.org/c3ref/set_authorizer.html]
+// https://www.sqlite.org/c3ref/set_authorizer.html
 func (c *Conn) AuthorizerFunc(f AuthorizerFunc) (prev AuthorizerFunc) {
 	idx := authorizerRegistry.register(f)
 	prevIdx := c.authorizerIdx
