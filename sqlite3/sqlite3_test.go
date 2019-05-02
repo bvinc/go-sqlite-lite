@@ -1200,3 +1200,53 @@ func TestWithTx(T *testing.T) {
 		t.Fatalf("WithTxImmediate hasn't returned the original error")
 	}
 }
+
+func TestOutOfRange(T *testing.T) {
+	t := begin(T)
+
+	c := t.open(":memory:")
+	defer t.close(c)
+	t.exec(c, "CREATE TABLE x(a TEXT)")
+	t.exec(c, "INSERT INTO x VALUES(?)", nil)
+	s := t.prepare(c, "SELECT * from x")
+	defer s.Close()
+
+	t.step(s, true)
+	x := "overwriteme"
+	s.Scan(&x)
+	if x != "" {
+		t.Fatal("Expected empty string")
+	}
+	_, _, err := s.ColumnText(1)
+	if err == nil {
+		t.Fatal("Expected out of range error")
+	}
+	_, err = s.ColumnBlob(1)
+	if err == nil {
+		t.Fatal("Expected out of range error")
+	}
+	_, _, err = s.ColumnDouble(1)
+	if err == nil {
+		t.Fatal("Expected out of range error")
+	}
+	_, _, err = s.ColumnInt(1)
+	if err == nil {
+		t.Fatal("Expected out of range error")
+	}
+	_, _, err = s.ColumnText(1)
+	if err == nil {
+		t.Fatal("Expected out of range error")
+	}
+	_, err = s.ColumnBytes(1)
+	if err == nil {
+		t.Fatal("Expected out of range error")
+	}
+	_, err = s.ColumnRawBytes(1)
+	if err == nil {
+		t.Fatal("Expected out of range error")
+	}
+	_, _, err = s.ColumnRawString(1)
+	if err == nil {
+		t.Fatal("Expected out of range error")
+	}
+}
