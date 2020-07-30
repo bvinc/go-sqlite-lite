@@ -42,6 +42,7 @@ package sqlite3
 #cgo CFLAGS: -DSQLITE_USE_URI=1
 #cgo linux LDFLAGS: -lm
 #cgo openbsd LDFLAGS: -lm
+#cgo freebsd LDFLAGS: -lm
 
 #cgo linux,!android CFLAGS: -DHAVE_FDATASYNC=1
 #cgo linux,!android CFLAGS: -DHAVE_PREAD=1 -DHAVE_PWRITE=1
