@@ -40,6 +40,7 @@ package sqlite3
 #cgo CFLAGS: -DSQLITE_THREADSAFE=2
 #cgo CFLAGS: -DSQLITE_USE_ALLOCA=1
 #cgo CFLAGS: -DSQLITE_USE_URI=1
+#cgo CFLAGS: -DSQLITE_DEFAULT_PAGE_SIZE=32768
 #cgo linux LDFLAGS: -lm
 #cgo openbsd LDFLAGS: -lm
 
@@ -811,6 +812,60 @@ func (s *Stmt) Exec(args ...interface{}) error {
 	}
 
 	return err
+}
+
+// ExecPrebound can be used to execute a prepared statement that has values
+// bound to it via BindString, BindEmptyString or BindNull.
+func (s *Stmt) ExecPrebound() error {
+	if err := s.StepToCompletion(); err != nil {
+		s.Reset()
+		return err
+	}
+
+	if err := s.Reset(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// BindString can be used for prepared statements that only expect strings.
+// Convenience method around C.bind_text()
+func (s *Stmt) BindString(v string, count int) error {
+	var rc C.int
+	rc = C.bind_text(s.stmt, C.int(count+1), cStr(v), C.int(len(v)), 1)
+	if rc != OK {
+		return errStr(rc)
+	}
+
+	return nil
+}
+
+var empty = C.CString(``)
+
+// BindEmptyString can be used for prepared statements that only expect strings and
+// require an empty but non-NULL value.
+func (s *Stmt) BindEmptyString(count int) error {
+	var rc C.int
+	rc = C.bind_text(s.stmt, C.int(count+1), empty, C.int(0), 1)
+	if rc != OK {
+		return errStr(rc)
+	}
+
+	return nil
+}
+
+// BindNull can be used for prepared statements where a NULL value is required
+// NB: SQLite has dynamic typing, even if the column is marked as TEXT inserting
+// NULL will not translate to an empty string, see BindEmptyString
+func (s *Stmt) BindNull(count int) error {
+	var rc C.int
+	rc = C.sqlite3_bind_null(s.stmt, C.int(count+1))
+	if rc != OK {
+		return errStr(rc)
+	}
+
+	return nil
 }
 
 // Bind binds either the named arguments or unnamed arguments depending on the
